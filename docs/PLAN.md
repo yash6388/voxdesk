@@ -129,4 +129,5 @@ Twilio phone calls · GraphRAG (Neo4j) · Hindi/multilingual voice · outbound r
 
 - `docs/PLAN.md` (this file) — plan & decisions
 - `docs/PROGRESS.md` — running progress + decision log (updated every session)
-- **After build:** `docs/interview/` — detailed, beginner-friendly explanation of everything: architecture walkthrough, each component deep-dive (LangGraph, MCP, A2A, RAG, voice), design trade-offs, numbers/results, limitations, and expected interview Q&A.
+- `docs/interview/` — beginner-friendly interview notes, **one topic file per phase, written right after that phase** (index in `00_INDEX.md`).
+- **At the very end:** `docs/interview/PROJECT_EXPLAINED.md` (whole project end to end) `docs/interview/PITCH.md` (how to present it: 30s / 2min / 5min versions), and `docs/interview/SYSTEM_DESIGN.md` (HLD for system-design rounds: requirements, estimates, components, scaling, failures, trade-offs).

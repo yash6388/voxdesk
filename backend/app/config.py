@@ -15,7 +15,24 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://voxdesk:voxdesk@localhost:5433/voxdesk"
     redis_url: str = "redis://localhost:6380/0"
 
+    # --- LLM / embeddings (Gemini) ---
     google_api_key: str = ""
+    chat_model: str = "gemini-2.5-flash"
+    router_model: str = "gemini-2.5-flash-lite"
+    embedding_model: str = "gemini-embedding-001"
+    embedding_dim: int = 768
+
+    # --- RAG ---
+    chunk_size: int = 1000
+    chunk_overlap: int = 150
+    retrieval_top_k: int = 5
+    retrieval_candidates: int = 20
+    max_upload_mb: int = 10
+
+    @property
+    def psycopg_url(self) -> str:
+        """Plain postgres URL for libraries using psycopg (LangGraph checkpointer)."""
+        return self.database_url.replace("postgresql+asyncpg://", "postgresql://")
 
 
 @lru_cache
