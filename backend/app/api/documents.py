@@ -1,18 +1,25 @@
 import mimetypes
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from sqlalchemy import select
 
-from app.api.businesses import get_business_or_404
 from app.api.deps import EmbedderDep, SessionDep
+from app.auth import CurrentUser, owned_business
 from app.config import get_settings
 from app.db.models import Document
 from app.db.session import SessionLocal
 from app.rag.ingestion import SUPPORTED_TYPES, ingest_document
+from app.ratelimit import LimiterDep, upload_limit
 from app.schemas import DocumentOut
 
-router = APIRouter(prefix="/businesses/{business_id}/documents", tags=["documents"])
+# Every route here is owner-only: the dependency runs before each endpoint and returns 404
+# unless the signed-in user owns {business_id}.
+router = APIRouter(
+    prefix="/businesses/{business_id}/documents",
+    tags=["documents"],
+    dependencies=[Depends(owned_business)],
+)
 
 mimetypes.add_type("text/markdown", ".md")
 
@@ -36,10 +43,12 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     session: SessionDep,
     embedder: EmbedderDep,
+    user: CurrentUser,
+    limiter: LimiterDep,
 ):
     """Accepts the file immediately (202) and ingests it in the background.
     Poll the document list to see `status` move from processing → ready."""
-    await get_business_or_404(business_id, session)
+    await limiter.enforce(upload_limit(str(user.id)))
     content_type = resolve_content_type(file)
 
     max_bytes = get_settings().max_upload_mb * 1024 * 1024

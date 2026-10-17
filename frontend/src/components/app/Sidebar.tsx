@@ -6,18 +6,20 @@ import {
   CalendarDays,
   ChartColumn,
   Clock,
+  LogOut,
   Menu,
   MessageSquare,
   Mic,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BackendStatus } from "@/components/BackendStatus";
 import { Logo } from "@/components/Logo";
 import { type Business, getBusiness } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { avatarGradient, cn, initials } from "@/lib/utils";
 
 type NavItem = { label: string; href?: string; icon: React.ElementType; soon?: boolean };
@@ -90,8 +92,11 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t border-border px-5 py-4">
-        <BackendStatus />
+      <div className="space-y-3 border-t border-border px-3 py-4">
+        <AccountMenu />
+        <div className="px-2">
+          <BackendStatus />
+        </div>
       </div>
     </div>
   );
@@ -126,6 +131,39 @@ export function Sidebar() {
         </div>
       )}
     </>
+  );
+}
+
+function AccountMenu() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  if (!user) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white",
+          avatarGradient(user.email),
+        )}
+      >
+        {initials(user.name)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">{user.name}</div>
+        <div className="truncate text-xs text-muted">{user.email}</div>
+      </div>
+      <button
+        onClick={async () => {
+          await logout();
+          router.replace("/login");
+        }}
+        className="rounded-md p-1.5 text-muted transition hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-800"
+        aria-label="Sign out"
+        title="Sign out"
+      >
+        <LogOut className="size-4" />
+      </button>
+    </div>
   );
 }
 

@@ -123,6 +123,7 @@ async def test_streaming_falls_back_when_circuit_is_open():
 async def test_llm_primary_fallback_flips_the_order(monkeypatch):
     gemini, groq = replies("gemini"), replies("groq")
 
+    monkeypatch.setattr(get_settings(), "llm_primary", "gemini")  # independent of local .env
     assert (await _ordered(gemini, groq).ainvoke("hi")).text == "gemini"
     monkeypatch.setattr(get_settings(), "llm_primary", "fallback")
     assert (await _ordered(gemini, groq).ainvoke("hi")).text == "groq"

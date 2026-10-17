@@ -12,8 +12,13 @@ export type ServiceHealth = {
 };
 export type ServicesHealth = { status: "ok" | "degraded"; services: ServiceHealth[] };
 
+export type User = { id: string; email: string; name: string };
+
+export type PublicBusiness = { id: string; slug: string; name: string; description: string };
+
 export type Business = {
   id: string;
+  slug: string;
   name: string;
   description: string;
   timezone: string;
@@ -80,6 +85,7 @@ export type ChatEvent =
   | { event: "route"; data: Route }
   | { event: "sources"; data: Source[] }
   | { event: "delegation"; data: Delegation }
+  | { event: "guardrail"; data: { reason: "too_long" | "prompt_injection" } }
   | { event: "tool_call"; data: ToolCall }
   | { event: "tool_result"; data: ToolResult }
   | { event: "confirm"; data: Confirmation }
@@ -89,11 +95,30 @@ export type ChatEvent =
 
 // ---------- Helpers ----------
 
+/** An API error that remembers its HTTP status (e.g. 401 → send the user to login). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+
+function errorMessage(body: { detail?: unknown }, status: number): string {
+  const { detail } = body;
+  if (typeof detail === "string") return detail;
+  // FastAPI validation errors: [{loc, msg, …}] → first readable message.
+  if (Array.isArray(detail) && detail[0]?.msg) return String(detail[0].msg).replace(/^Value error, /, "");
+  return `Request failed: ${status}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store", ...init });
+  // credentials: "include" sends the httpOnly session cookie to the API.
+  const res = await fetch(`${API_URL}${path}`, { cache: "no-store", credentials: "include", ...init });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail ?? `Request failed: ${res.status}`);
+    throw new ApiError(errorMessage(body, res.status), res.status);
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
@@ -107,6 +132,16 @@ const json = (body: unknown): RequestInit => ({
 // ---------- Endpoints ----------
 
 export const getHealth = () => request<HealthResponse>("/health");
+
+export const signup = (email: string, password: string, name: string) =>
+  request<{ user: User }>("/auth/signup", json({ email, password, name }));
+export const login = (email: string, password: string) =>
+  request<{ user: User }>("/auth/login", json({ email, password }));
+export const logout = () => request<void>("/auth/logout", { method: "POST" });
+export const getMe = () => request<User>("/auth/me");
+
+export const getPublicBusiness = (slug: string) =>
+  request<PublicBusiness>(`/public/businesses/${slug}`);
 export const getServicesHealth = () => request<ServicesHealth>("/health/services");
 
 export const listBusinesses = () => request<Business[]>("/businesses");
@@ -182,7 +217,7 @@ async function* streamEvents(
   body: unknown,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
-  const res = await fetch(`${API_URL}${path}`, { ...json(body), signal });
+  const res = await fetch(`${API_URL}${path}`, { ...json(body), credentials: "include", signal });
   if (!res.ok || !res.body) {
     const detail = await res.json().catch(() => ({}));
     throw new Error(detail.detail ?? `Request failed: ${res.status}`);

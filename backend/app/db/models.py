@@ -1,4 +1,5 @@
 import enum
+import secrets
 import uuid
 from datetime import datetime, time
 
@@ -36,12 +37,32 @@ class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class User(TimestampMixin, Base):
+    """A business owner who logs in to the dashboard. Customers never need an account."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    password_hash: Mapped[str] = mapped_column(String(255))
+
+
 class Business(TimestampMixin, Base):
     """A tenant: every document, chunk and conversation belongs to one business."""
 
     __tablename__ = "businesses"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    # Nullable only for businesses created before accounts existed (claimed at first signup).
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # Public, URL-friendly identifier for the customer chat page: /c/<slug>. The API sets a
+    # readable one from the name; the default only covers programmatic creation (scripts, tests).
+    slug: Mapped[str] = mapped_column(
+        String(80), unique=True, index=True, default=lambda: f"business-{secrets.token_hex(4)}"
+    )
     name: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
     # IANA name, e.g. "Asia/Kolkata". Bookings are stored in UTC and shown in this zone.

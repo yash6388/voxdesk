@@ -18,6 +18,8 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - `backend/app/mcp/` — our own FastMCP booking server, run separately: `uv run python -m app.mcp.server` (:8001)
 - `backend/app/booking/` — booking domain rules (shared by MCP server + owner REST API)
 - `backend/scripts/seed_demo.py` — demo salon data (`uv run python -m scripts.seed_demo`)
+- `backend/app/auth.py` + `app/api/auth.py` — owner auth (Argon2id, JWT in httpOnly cookie); `OwnedBusiness` dependency = tenant isolation (404 for others). Customer-facing chat/voice/public endpoints stay unauthenticated
+- `backend/app/ratelimit.py` (Redis, fail-open) + `app/guardrails.py` (length + prompt-injection, before any LLM) — tests run with `RATE_LIMIT_ENABLED=false` except `test_protection.py`
 - `backend/app/llm.py` — all chat models (Gemini behind a circuit breaker; OpenAI-compatible fallback — Groq/OpenRouter/HF — when `FALLBACK_API_KEY` is set; `LLM_PRIMARY=fallback` flips the order)
 - Postgres 16 + pgvector (app data, vectors, LangGraph checkpoints), Redis, Docker Compose
   - Host ports **5433** (Postgres) and **6380** (Redis) — owner has local Postgres/Redis on the default ports for work; never use 5432/6379

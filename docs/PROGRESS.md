@@ -69,10 +69,11 @@
 ## Next up — Phase 5 (production polish) — agreed plan (2026-10-18)
 Order: 1 → 6, then final docs; deployment target decided later (repo made deploy-ready).
 - [x] 1. Docker: one backend image (API/MCP/agents, non-root, uv-locked deps) + standalone Next.js image; Compose `app` profile (`docker compose --profile app up -d --build` → 7 services with healthchecks, voice models in volumes, migrations on API start); CI job builds both images. Smoke-tested images: API readiness all up, MCP 401 without key, frontend 200. Images: backend 1.6 GB (speech runtimes), frontend 243 MB
-- [ ] 2. Auth + multi-tenancy: owner signup/login (JWT), businesses owned by users, protected dashboard; public customer chat link per business
-- [ ] 3. Protection: Redis rate limiting (per IP / per business), input guardrails (length, prompt-injection checks)
+- [x] 2. Auth + multi-tenancy: `users` table; Argon2id hashing (pwdlib); JWT (HS256, 7 days) in an **httpOnly SameSite=Lax cookie** + Bearer header for API clients; `/auth/signup|login|logout|me`; constant-time-ish login (dummy hash) + identical errors; businesses get `owner_id` + unique `slug` (3-step migration with backfill); documents/booking routers owner-only via router-level dependency (closed 3 unchecked endpoints); other tenants get **404 not 403**; first signup claims pre-auth businesses; `/public/businesses/{slug}`; production refuses dev JWT secret / insecure cookies. Frontend: login/signup split-screen pages, `AuthProvider` + `RequireAuth`, sidebar account + sign out, landing Log in / Get started, **public customer page `/c/<slug>`**, "Copy customer link" in Playground. 88 tests (11 new auth/isolation)
+- [x] 3. Protection: **Redis fixed-window rate limiter** (`app/ratelimit.py`; INCR + EXPIRE NX in a transaction; fails open if Redis is down) — chat/resume/voice 20/min per IP + 120/min per business, login/signup 10/min per IP, uploads 20/min per user; 429 + `Retry-After`. **Input guardrails** (`app/guardrails.py`): 2,000-char limit + prompt-injection patterns, checked before any graph/LLM work (chat + voice); 2 false positives found and fixed; voice audio capped at 5 MB. Inspector shows "Guardrail" when it fires. CI now has a Redis service. 110 tests (22 new)
 - [ ] 4. Observability: Langfuse tracing (steps, latency, tokens, which model answered)
 - [ ] 5. Evaluation suite: golden set → retrieval hit-rate@k, routing accuracy, tool-call accuracy, faithfulness (LLM judge), latency; reranker experiment
+- [ ] 5b. Share panel: copy link + QR code download + website embed snippet + floating chat-bubble widget (one `<script>` tag on any site)
 - [ ] 6. Analytics page + human handoff
 - [ ] 7. Final docs: `09_production.md`, `PROJECT_EXPLAINED.md`, `PITCH.md`, `SYSTEM_DESIGN.md`, README polish (+ demo GIF)
 - [ ] 8. Owner's personal testing (1–2 days) → fix UI/bugs found
@@ -144,5 +145,14 @@ Order: 1 → 6, then final docs; deployment target decided later (repo made depl
 | 2026-10-18 | Circuit breaker on the primary LLM + `LLM_PRIMARY` switch | Stop paying a 429 round trip per call when the provider is known to be down; manual override for dev |
 | 2026-10-18 | One backend image for API, MCP and agents; Compose profiles | Same code, different command; `docker compose up` keeps the infra-only dev flow, `--profile app` runs everything |
 | 2026-10-18 | Voice models in Docker volumes, not baked into images | Smaller images; downloaded once on first start |
+| 2026-10-18 | JWT in httpOnly cookie (+ Bearer for API clients) | JS can't read it → XSS can't steal sessions; SameSite=Lax blocks cross-site POSTs (CSRF) |
+| 2026-10-18 | Argon2id via pwdlib | Memory-hard; current OWASP recommendation |
+| 2026-10-18 | Other tenants' resources → 404, not 403 | Don't reveal which ids exist |
+| 2026-10-18 | Ownership check as a router-level dependency | Every current and future route under the prefix is protected by default |
+| 2026-10-18 | Public slug page; chat/voice stay public by business id | Customers need no account; management needs one |
+| 2026-10-18 | First signup claims pre-auth businesses | Migrates existing demo data without manual SQL |
+| 2026-10-18 | Fixed-window rate limits in Redis, fail-open | Shared across replicas; availability over strictness for a customer-facing assistant |
+| 2026-10-18 | Per-IP and per-business chat limits | IP stops one abuser; business limit protects each tenant's LLM budget |
+| 2026-10-18 | Regex prompt-injection guardrail before the LLM, tuned on legit + attack cases | Zero cost/latency first line of defence; false positives block real customers, so tested both ways |
 | 2026-10-18 | No embedding fallback | Different embedding models produce incomparable vector spaces; would require re-embedding all chunks |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

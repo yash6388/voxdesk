@@ -9,6 +9,8 @@ TEST_DATABASE_URL = os.environ.setdefault(
     "TEST_DATABASE_URL", "postgresql+asyncpg://voxdesk:voxdesk@localhost:5433/voxdesk_test"
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+# Off by default so tests can make many requests; tests/test_protection.py turns it on.
+os.environ["RATE_LIMIT_ENABLED"] = "false"
 
 import asyncpg  # noqa: E402
 import pytest  # noqa: E402
@@ -71,7 +73,8 @@ async def db(_schema):
     async with engine.begin() as c:
         await c.execute(
             text(
-                "TRUNCATE businesses, documents, chunks, services, business_hours, bookings CASCADE"
+                "TRUNCATE users, businesses, documents, chunks, services, business_hours, "
+                "bookings CASCADE"
             )
         )
     yield

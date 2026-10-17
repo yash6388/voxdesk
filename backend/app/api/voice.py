@@ -24,13 +24,15 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
 
 from app.conversation import graph_config, pending_confirmation, run_events, turn_input
 from app.db.models import Business
 from app.db.session import SessionLocal
 from app.errors import friendly_error
+from app.guardrails import check_message
+from app.ratelimit import RateLimiter, chat_limits, client_ip, get_rate_limiter
 from app.voice.providers import STT, TTS, get_stt, get_tts
 from app.voice.text import SentenceSplitter, speakable, spoken_decision
 
@@ -39,6 +41,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["voice"])
 
 NOT_HEARD = "Sorry, I didn't catch that. Could you say it again?"
+# ~5 MB ≈ several minutes of webm/opus — far beyond one spoken turn.
+MAX_AUDIO_BYTES = 5 * 1024 * 1024
 ASK_AGAIN = "Please say yes to confirm, or no to cancel."
 
 
@@ -53,10 +57,18 @@ def confirmation_prompt(confirmation: dict) -> str:
 
 class VoiceSession:
     def __init__(
-        self, ws: WebSocket, graph, business: Business, thread_id: str, stt: STT, tts: TTS
+        self,
+        ws: WebSocket,
+        graph,
+        business: Business,
+        thread_id: str,
+        stt: STT,
+        tts: TTS,
+        limiter: RateLimiter,
     ):
         self.ws, self.graph, self.business = ws, graph, business
         self.thread_id, self.stt, self.tts = thread_id, stt, tts
+        self.limiter = limiter
         self.config = graph_config(business.id, thread_id)
         self._send_lock = asyncio.Lock()
         self._seq = 0
@@ -84,6 +96,18 @@ class VoiceSession:
         started = time.perf_counter()
         timing: dict[str, float] = {}
 
+        try:
+            await self.limiter.enforce(*chat_limits(client_ip(self.ws), str(self.business.id)))
+        except HTTPException as exc:
+            await self.send({"type": "error", "data": {"message": exc.detail}})
+            await self.speak(exc.detail)
+            await self.send({"type": "turn_end"})
+            return
+        if audio is not None and len(audio) > MAX_AUDIO_BYTES:
+            await self.speak("That was a bit long — could you say it more briefly?")
+            await self.send({"type": "turn_end"})
+            return
+
         if audio is not None:
             text = await self.stt.transcribe(audio)
             timing["stt_ms"] = (time.perf_counter() - started) * 1000
@@ -91,6 +115,13 @@ class VoiceSession:
         await self.send({"type": "transcript", "text": text})
         if not text:
             await self.speak(NOT_HEARD)
+            await self.send({"type": "turn_end"})
+            return
+
+        verdict = check_message(text, self.business.name)
+        if not verdict.allowed:
+            await self.send({"type": "guardrail", "data": {"reason": verdict.reason}})
+            await self.speak(verdict.reply)
             await self.send({"type": "turn_end"})
             return
 
@@ -166,6 +197,7 @@ async def voice(
     thread_id: str | None = None,
     stt: STT = Depends(get_stt),  # noqa: B008 — FastAPI's standard WebSocket dependency style
     tts: TTS = Depends(get_tts),  # noqa: B008
+    limiter: RateLimiter = Depends(get_rate_limiter),  # noqa: B008
 ):
     await ws.accept()
     async with SessionLocal() as session:
@@ -175,7 +207,7 @@ async def voice(
         return
 
     session = VoiceSession(
-        ws, ws.app.state.graph, business, thread_id or str(uuid.uuid4()), stt, tts
+        ws, ws.app.state.graph, business, thread_id or str(uuid.uuid4()), stt, tts, limiter
     )
     await session.send(
         {

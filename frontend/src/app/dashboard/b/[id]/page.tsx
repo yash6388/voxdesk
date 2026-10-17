@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp } from "lucide-react";
+import { Check, ExternalLink, FileUp, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { Inspector } from "@/components/chat/Inspector";
 import type { UIMessage } from "@/components/chat/types";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink, buttonClass } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/primitives";
 import { type Business, getBusiness } from "@/lib/api";
 import { useDocuments } from "@/lib/useDocuments";
@@ -44,6 +44,7 @@ export default function PlaygroundPage() {
       <PageHeader
         title="Playground"
         description="Talk to the agent exactly as your customers will, and see how it decides."
+        actions={business && <CustomerLink slug={business.slug} />}
       />
 
       {documents !== null && stats.ready === 0 && (
@@ -73,6 +74,37 @@ export default function PlaygroundPage() {
           <Inspector message={inspected} />
         </Card>
       </div>
+    </>
+  );
+}
+
+/** The public page customers use — copy it to a website, WhatsApp bio, Google profile… */
+function CustomerLink({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/c/${slug}`;
+
+  async function copy() {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <>
+      <Button variant="secondary" onClick={copy} title={url}>
+        {copied ? <Check className="size-4 text-emerald-600" /> : <Link2 className="size-4" />}
+        {copied ? "Copied" : "Copy customer link"}
+      </Button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={buttonClass("secondary")}
+        aria-label="Open customer page"
+        title="Open customer page"
+      >
+        <ExternalLink className="size-4" />
+      </a>
     </>
   );
 }

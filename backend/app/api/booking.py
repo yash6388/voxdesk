@@ -3,27 +3,31 @@
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import selectinload
 
-from app.api.businesses import get_business_or_404
 from app.api.deps import SessionDep
+from app.auth import owned_business
 from app.booking import service as booking
 from app.db.models import Booking, BookingStatus, Service
 from app.schemas import BookingOut, HoursDay, HoursUpdate, ServiceCreate, ServiceOut
 
-router = APIRouter(prefix="/businesses/{business_id}", tags=["booking"])
+# Every route here is owner-only: the dependency runs before each endpoint and returns 404
+# unless the signed-in user owns {business_id}.
+router = APIRouter(
+    prefix="/businesses/{business_id}",
+    tags=["booking"],
+    dependencies=[Depends(owned_business)],
+)
 
 
 @router.get("/services", response_model=list[ServiceOut])
 async def list_services(business_id: uuid.UUID, session: SessionDep):
-    await get_business_or_404(business_id, session)
     return await booking.list_services(session, business_id, include_inactive=True)
 
 
 @router.post("/services", response_model=ServiceOut, status_code=status.HTTP_201_CREATED)
 async def create_service(business_id: uuid.UUID, body: ServiceCreate, session: SessionDep):
-    await get_business_or_404(business_id, session)
     service = Service(business_id=business_id, **body.model_dump())
     session.add(service)
     await session.commit()
@@ -45,13 +49,11 @@ async def set_service_active(
 
 @router.get("/hours", response_model=list[HoursDay])
 async def get_hours(business_id: uuid.UUID, session: SessionDep):
-    await get_business_or_404(business_id, session)
     return await booking.get_hours(session, business_id)
 
 
 @router.put("/hours", response_model=list[HoursDay])
 async def set_hours(business_id: uuid.UUID, body: HoursUpdate, session: SessionDep):
-    await get_business_or_404(business_id, session)
     week = [(d.weekday, d.opens_at, d.closes_at) for d in body.days]
     return await booking.set_hours(session, business_id, week)
 
@@ -71,7 +73,6 @@ def _booking_out(b: Booking) -> BookingOut:
 
 @router.get("/bookings", response_model=list[BookingOut])
 async def list_bookings(business_id: uuid.UUID, session: SessionDep):
-    await get_business_or_404(business_id, session)
     return [_booking_out(b) for b in await booking.list_bookings(session, business_id)]
 
 

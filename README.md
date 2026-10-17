@@ -38,7 +38,8 @@ docker compose --profile app up -d --build
 ```
 Opens on http://localhost:3000 (API on :8000). The first start downloads the local voice models
 (~250 MB) into a Docker volume. Seven services start: Postgres, Redis, API, MCP server, Knowledge
-agent, Booking agent and the frontend. `docker compose --profile app down` stops them.
+agent, Booking agent and the frontend. `docker compose --profile app down` stops them **all,
+including Postgres/Redis** — for dev mode afterwards, run `docker compose up -d` again.
 
 ## Running locally (development)
 
@@ -76,7 +77,9 @@ indicator at the bottom of the dashboard sidebar).
 
 ## Try it (UI)
 
-Open http://localhost:3000 → **Open dashboard** → **New business** → upload
+Open http://localhost:3000 → **Get started** to create an owner account (the **first** account
+also takes ownership of businesses created before accounts existed, e.g. the seeded demo salon) →
+**New business** → upload
 `samples/glow-studio-salon.md` in the Knowledge base → open the **Playground** and ask
 *"How much is a keratin treatment?"*, then *"And how long does it take?"*.
 The **Agent Inspector** shows the routing decision, the rewritten search query, the cited sources
@@ -86,6 +89,9 @@ To try booking: run the seed script (or add services and hours under **Services 
 the Playground say *"Book a men's haircut tomorrow afternoon"*. The agent checks real availability
 through the MCP server, asks for your name and phone, and shows a **confirmation card** before
 booking. Confirmed bookings appear on the **Bookings** page.
+
+**Customer page:** in the Playground, **Copy customer link** gives the public page
+(`/c/<slug>`) a business shares with customers — no login needed.
 
 ## Try it (voice)
 

@@ -91,8 +91,11 @@ export default function Landing() {
           <a href="#how" className="hidden px-3 text-sm text-muted hover:text-foreground sm:block">
             How it works
           </a>
-          <ButtonLink href="/dashboard" size="sm">
-            Open dashboard <ArrowRight className="size-4" />
+          <ButtonLink href="/login" size="sm" variant="ghost">
+            Log in
+          </ButtonLink>
+          <ButtonLink href="/signup" size="sm">
+            Get started <ArrowRight className="size-4" />
           </ButtonLink>
         </nav>
       </header>
@@ -113,8 +116,8 @@ export default function Landing() {
             own documents and books their appointments — by chat or by voice.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/dashboard" size="lg">
-              Get started <ArrowRight className="size-4" />
+            <ButtonLink href="/signup" size="lg">
+              Get started free <ArrowRight className="size-4" />
             </ButtonLink>
             <ButtonLink href="#how" size="lg" variant="secondary">
               See how it works
@@ -185,12 +188,12 @@ export default function Landing() {
             Create a business, upload a document, and chat with your agent in under a minute.
           </p>
           <ButtonLink
-            href="/dashboard"
+            href="/signup"
             size="lg"
             variant="secondary"
             className="relative mt-8 border-transparent bg-white text-zinc-900 hover:bg-zinc-100"
           >
-            Open dashboard <ArrowRight className="size-4" />
+            Create your agent <ArrowRight className="size-4" />
           </ButtonLink>
         </div>
       </section>

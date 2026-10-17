@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.a2a.client import A2AAgent
-from app.api import booking, businesses, chat, documents, health, voice
+from app.api import auth, booking, businesses, chat, documents, health, voice
 from app.config import get_settings
 from app.db.session import engine
 from app.graph.checkpoint import postgres_checkpointer
@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     """Startup: open the checkpointer pool, connect to the A2A agents, compile the
     supervisor graph once. Shutdown: close everything cleanly."""
     settings = get_settings()
+    settings.check_production_safety()
     knowledge = A2AAgent("knowledge", settings.knowledge_agent_url, settings.a2a_api_key)
     booking_agent = A2AAgent("booking", settings.booking_agent_url, settings.a2a_api_key)
     # Speech models load in the background; the API is usable immediately.
@@ -54,7 +55,9 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(businesses.router)
+    app.include_router(businesses.public_router)
     app.include_router(documents.router)
     app.include_router(booking.router)
     app.include_router(chat.router)

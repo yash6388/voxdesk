@@ -8,6 +8,8 @@ export type UIMessage = {
   content: string;
   route?: Route;
   sources?: Source[];
+  /** Set when an input guardrail blocked the message before any LLM saw it. */
+  guardrail?: string;
   /** The A2A agent this reply came from (latest state of its task). */
   delegation?: Delegation;
   /** MCP tool calls the booking agent made during this reply. */

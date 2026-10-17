@@ -3,6 +3,8 @@ from functools import lru_cache
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEV_JWT_SECRET = "dev-secret-change-me-in-production-please"
+
 
 class Settings(BaseSettings):
     """App settings, loaded from environment variables (and .env for local dev)."""
@@ -15,6 +17,22 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://voxdesk:voxdesk@localhost:5433/voxdesk"
     redis_url: str = "redis://localhost:6380/0"
+
+    # --- Auth (business owners) ---
+    jwt_secret: str = DEV_JWT_SECRET
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+    # Cookie flags: in production (HTTPS) set COOKIE_SECURE=true; if the frontend and API
+    # are on different sites, COOKIE_SAMESITE=none (requires secure).
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
+    public_app_url: str = "http://localhost:3000"
+
+    # --- Rate limits (requests per minute) ---
+    rate_limit_enabled: bool = True
+    chat_limit_per_ip: int = 20
+    chat_limit_per_business: int = 120
+    auth_limit_per_ip: int = 10
+    upload_limit_per_user: int = 20
 
     # --- LLM / embeddings (Gemini) ---
     google_api_key: str = ""
@@ -80,6 +98,15 @@ class Settings(BaseSettings):
     elevenlabs_voice_id: str = "JBFqnCBsd6RMkjVDRZzb"
     elevenlabs_tts_model: str = "eleven_flash_v2_5"  # lowest-latency ElevenLabs model
     elevenlabs_stt_model: str = "scribe_v1"
+
+    def check_production_safety(self) -> None:
+        """Refuse to run in production with development secrets."""
+        if self.environment != "production":
+            return
+        if self.jwt_secret == DEV_JWT_SECRET or len(self.jwt_secret) < 32:
+            raise RuntimeError("Set JWT_SECRET to a random value of at least 32 characters")
+        if not self.cookie_secure:
+            raise RuntimeError("COOKIE_SECURE must be true in production (HTTPS)")
 
     @property
     def psycopg_url(self) -> str:

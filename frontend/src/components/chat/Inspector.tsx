@@ -10,6 +10,7 @@ import {
   Network,
   Plug,
   Search,
+  ShieldAlert,
 } from "lucide-react";
 
 import type { ToolStep, UIMessage } from "@/components/chat/types";
@@ -54,6 +55,20 @@ export function Inspector({ message }: { message: UIMessage | null }) {
               </p>
             )}
           </Section>
+
+          {message.guardrail && (
+            <Section title="Guardrail">
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-xs dark:border-amber-500/30 dark:bg-amber-500/10">
+                <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+                <span>
+                  Blocked before reaching any model:{" "}
+                  <span className="font-medium">
+                    {message.guardrail === "prompt_injection" ? "possible prompt injection" : "message too long"}
+                  </span>
+                </span>
+              </div>
+            </Section>
+          )}
 
           {message.delegation && (
             <Section title="Agent · A2A">

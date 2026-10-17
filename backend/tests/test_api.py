@@ -7,8 +7,14 @@ from app.rag.embeddings import get_embedder
 
 @pytest.fixture
 async def client(db, fake_embedder):
+    """A signed-in owner: the session cookie from signup is kept by the client."""
     app.dependency_overrides[get_embedder] = lambda: fake_embedder
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        signup = await c.post(
+            "/auth/signup",
+            json={"email": "owner@example.com", "password": "correct-horse", "name": "Owner"},
+        )
+        assert signup.status_code == 201
         yield c
     app.dependency_overrides.clear()
 

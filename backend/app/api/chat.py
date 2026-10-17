@@ -9,6 +9,8 @@ from langgraph.types import Command
 from app.api.businesses import get_business_or_404
 from app.api.deps import SessionDep
 from app.conversation import graph_config, pending_confirmation, run_events, turn_input
+from app.guardrails import Verdict, check_message
+from app.ratelimit import LimiterDep, chat_limits, client_ip
 from app.schemas import ChatHistory, ChatMessage, ChatRequest, ChatResume
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -24,6 +26,14 @@ async def stream_run(graph, graph_input, config: dict, thread_id: str) -> AsyncI
         yield sse(event, data)
 
 
+async def blocked_reply(thread_id: str, verdict: Verdict) -> AsyncIterator[str]:
+    """A guardrail stopped the message before any LLM saw it: answer politely instead."""
+    yield sse("meta", {"thread_id": thread_id})
+    yield sse("guardrail", {"reason": verdict.reason})
+    yield sse("token", {"text": verdict.reply})
+    yield sse("done", {})
+
+
 def streaming_response(events: AsyncIterator[str]) -> StreamingResponse:
     return StreamingResponse(
         events,
@@ -33,13 +43,19 @@ def streaming_response(events: AsyncIterator[str]) -> StreamingResponse:
 
 
 @router.post("")
-async def chat(body: ChatRequest, request: Request, session: SessionDep):
+async def chat(body: ChatRequest, request: Request, session: SessionDep, limiter: LimiterDep):
     """Send a customer message; the reply streams back as Server-Sent Events."""
+    await limiter.enforce(*chat_limits(client_ip(request), str(body.business_id)))
     business = await get_business_or_404(body.business_id, session)
     thread_id = body.thread_id or str(uuid.uuid4())
+
+    # Before any graph/checkpoint work: a blocked message should cost nothing.
+    verdict = check_message(body.message, business.name)
+    if not verdict.allowed:
+        return streaming_response(blocked_reply(thread_id, verdict))
+
     graph = request.app.state.graph
     config = graph_config(business.id, thread_id)
-
     if body.thread_id and await pending_confirmation(graph, config):
         raise HTTPException(
             status.HTTP_409_CONFLICT, "Please confirm or decline the pending action first."
@@ -50,8 +66,9 @@ async def chat(body: ChatRequest, request: Request, session: SessionDep):
 
 
 @router.post("/resume")
-async def resume(body: ChatResume, request: Request, session: SessionDep):
+async def resume(body: ChatResume, request: Request, session: SessionDep, limiter: LimiterDep):
     """Approve or decline the action the agent is waiting on, and stream the outcome."""
+    await limiter.enforce(*chat_limits(client_ip(request), str(body.business_id)))
     await get_business_or_404(body.business_id, session)
     graph = request.app.state.graph
     config = graph_config(body.business_id, body.thread_id)

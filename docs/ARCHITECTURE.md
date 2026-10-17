@@ -313,6 +313,7 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
+    USERS ||--o{ BUSINESSES : owns
     BUSINESSES ||--o{ DOCUMENTS : has
     BUSINESSES ||--o{ CHUNKS : "owns (tenant filter)"
     DOCUMENTS ||--o{ CHUNKS : "split into"
@@ -321,8 +322,16 @@ erDiagram
     BUSINESSES ||--o{ BOOKINGS : receives
     SERVICES ||--o{ BOOKINGS : "booked as"
 
+    USERS {
+        uuid id PK
+        string email "unique, lowercase"
+        string name
+        string password_hash "argon2id"
+    }
     BUSINESSES {
         uuid id PK
+        uuid owner_id FK
+        string slug "unique, public URL /c/slug"
         string name
         text description
         string timezone "IANA, e.g. Asia/Kolkata"
@@ -398,6 +407,8 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 | Booking confirmation = A2A `input-required` + supervisor `interrupt()` | HITL maps onto the protocol's task lifecycle; UI/API contract unchanged |
 | Business info as metadata on every A2A message | A2A doesn't persist request metadata across messages |
 | Agent Card public, JSON-RPC bearer-protected | Discovery is the point of a card; calling needs credentials |
+| Owner auth: JWT in httpOnly cookie; owner-only routers return 404 for other tenants | XSS-safe sessions, tenant isolation, no id enumeration |
+| Public customer page by slug; chat/voice endpoints public | Customers never need an account |
 | SSE for chat, WebSocket for voice | One-way token stream vs two-way audio + control stream |
 | Local STT/TTS by default, ElevenLabs by config | Free/private/no quotas for dev; best quality when needed; same interface |
 | Per-sentence TTS pipelined with LLM streaming | Caller hears the first sentence long before the answer is finished |

@@ -10,8 +10,9 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.api.businesses import unique_slug
 from app.booking.service import set_hours
-from app.db.models import Business, Document, Service
+from app.db.models import Business, Document, Service, User
 from app.db.session import SessionLocal, engine
 from app.rag.embeddings import get_embedder
 from app.rag.ingestion import ingest_document
@@ -45,9 +46,14 @@ HOURS = [
 async def main() -> None:
     async with SessionLocal() as session:
         business = await session.scalar(select(Business).where(Business.name == NAME))
+        # Owned by the first account if one exists; otherwise the first signup claims it.
+        owner = await session.scalar(select(User).order_by(User.created_at))
         if business is None:
             business = Business(
-                name=NAME, description="A hair and beauty salon in Koregaon Park, Pune."
+                name=NAME,
+                description="A hair and beauty salon in Koregaon Park, Pune.",
+                slug=await unique_slug(session, NAME),
+                owner_id=owner.id if owner else None,
             )
             session.add(business)
             await session.commit()

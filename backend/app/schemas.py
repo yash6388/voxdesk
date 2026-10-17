@@ -2,9 +2,46 @@ import uuid
 from datetime import datetime, time
 from zoneinfo import available_timezones
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.db.models import BookingStatus, DocumentStatus
+
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    name: str = Field(min_length=1, max_length=200)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    name: str
+
+
+class AuthResponse(BaseModel):
+    user: UserOut
+    # Also set as an httpOnly cookie; returned for API clients (e.g. Swagger "Authorize").
+    access_token: str
+    token_type: str = "bearer"
+
+
+class PublicBusiness(BaseModel):
+    """What an anonymous customer may see about a business."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    slug: str
+    name: str
+    description: str
 
 
 class BusinessCreate(BaseModel):
@@ -25,6 +62,7 @@ class BusinessOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    slug: str
     name: str
     description: str
     timezone: str

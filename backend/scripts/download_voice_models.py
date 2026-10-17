@@ -6,6 +6,7 @@
 - faster-whisper STT model (~145 MB for base.en) → Hugging Face cache
 """
 
+import sys
 from pathlib import Path
 
 import httpx
@@ -29,7 +30,8 @@ def download(url: str, dest: Path) -> None:
             for chunk in r.iter_bytes(1 << 20):
                 f.write(chunk)
                 done += len(chunk)
-                if total:
+                # Live progress only in a terminal; logs (e.g. Docker) get just the result.
+                if total and sys.stdout.isatty():
                     print(f"\r  {dest.name}: {done * 100 // total}%", end="", flush=True)
     tmp.rename(dest)  # only a complete download gets the real name
     print(f"\r✓ {dest.name} ({done / 1e6:.0f} MB)")
