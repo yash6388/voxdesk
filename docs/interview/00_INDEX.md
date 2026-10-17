@@ -23,7 +23,7 @@ Each file is written right after the phase it covers, while the details are fres
 | 03 | [03_langgraph_agent.md](03_langgraph_agent.md) | LangGraph state machine, router, query rewriting, memory/checkpointer, SSE streaming | ✅ Phase 1 |
 | 04 | [04_testing.md](04_testing.md) | Testing strategy: fakes for LLMs/embeddings, real Postgres, CI | ✅ Phase 1 |
 | 05 | [05_frontend.md](05_frontend.md) | Next.js app, typed API client, reading SSE streams, history restore, upload polling, CORS | ✅ Phase 1 |
-| 06 | `06_mcp.md` | Our MCP server, MCP vs function calling, human-in-the-loop booking | ⏳ Phase 2 |
+| 06 | [06_mcp.md](06_mcp.md) | MCP server + client, tool design, tenant security, exclusion constraint, booking agent, human-in-the-loop, guardrails, live-test bugs | ✅ Phase 2 |
 | 07 | `07_a2a.md` | A2A protocol, Agent Cards, MCP vs A2A | ⏳ Phase 3 |
 | 08 | `08_voice.md` | STT → agent → TTS pipeline, latency, barge-in | ⏳ Phase 4 |
 | 09 | `09_production.md` | Tracing, evals, auth, rate limiting, deployment | ⏳ Phase 5 |
@@ -52,5 +52,11 @@ Each file is written right after the phase it covers, while the details are fres
 | **Checkpointer** | LangGraph component that saves graph state after each step — gives the agent memory |
 | **SSE** | Server-Sent Events — the server pushes a stream of messages to the browser over one HTTP response |
 | **Multi-tenant** | One system serving many customers (businesses) with their data kept separate |
+| **MCP** | Model Context Protocol — standard for AI apps to discover and call tools in a separate server |
+| **Tool call** | The LLM asking the app to run a named function with JSON arguments |
+| **Human-in-the-loop (HITL)** | The agent pauses and a person approves before an action runs |
+| **interrupt()** | LangGraph function that checkpoints the graph and pauses it until resumed |
+| **Exclusion constraint** | Postgres rule that no two rows may "conflict" (here: overlapping time ranges) |
+| **Guardrail** | A code check that stops or corrects unsafe/invalid LLM output |
 | **Migration** | A versioned script that changes the database schema (Alembic) |
 | **CI** | Continuous Integration — automatic lint + tests on every push (GitHub Actions) |

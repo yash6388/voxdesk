@@ -22,7 +22,7 @@ async def get_business_or_404(business_id: uuid.UUID, session: AsyncSession) -> 
 
 @router.post("", response_model=BusinessOut, status_code=status.HTTP_201_CREATED)
 async def create_business(body: BusinessCreate, session: SessionDep):
-    business = Business(name=body.name, description=body.description)
+    business = Business(**body.model_dump())
     session.add(business)
     await session.commit()
     return business

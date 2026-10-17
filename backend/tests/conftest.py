@@ -58,6 +58,7 @@ async def _schema():
 
     async with engine.begin() as c:
         await c.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await c.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
         await c.run_sync(Base.metadata.drop_all)
         await c.run_sync(Base.metadata.create_all)
     yield
@@ -68,5 +69,9 @@ async def _schema():
 async def db(_schema):
     """Empty tables before each test that touches the database."""
     async with engine.begin() as c:
-        await c.execute(text("TRUNCATE businesses, documents, chunks CASCADE"))
+        await c.execute(
+            text(
+                "TRUNCATE businesses, documents, chunks, services, business_hours, bookings CASCADE"
+            )
+        )
     yield

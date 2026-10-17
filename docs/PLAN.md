@@ -101,11 +101,12 @@ Each phase ends with something demoable and a commit.
 - `/chat` endpoint with SSE streaming; Next.js chat page + doc upload page
 - *(Built: see `docs/PROGRESS.md` for details and `docs/interview/02–05` for explanations)*
 
-### Phase 2 — MCP
-- `mcp_servers/voxdesk_mcp`: FastMCP server over streamable HTTP; tools for services, availability, book, reschedule, cancel; validation (no double booking, no past slots)
+### Phase 2 — MCP ✅
+- MCP server (built in `backend/app/mcp/`, runs as its own process on :8001): FastMCP over streamable HTTP; tools for services, availability, book, reschedule, cancel; validation (no double booking, no past slots)
 - LangGraph loads tools via `langchain-mcp-adapters`
 - Human-in-the-loop: graph `interrupt()` → user confirms booking → resume
 - Bonus: connect Claude Desktop to our MCP server (demo of decoupling)
+- *(Built: see `docs/PROGRESS.md` and `docs/interview/06_mcp.md`)*
 
 ### Phase 3 — A2A
 - Move RAG into `agents/knowledge_agent` and booking logic into `agents/booking_agent`, each an A2A server with an Agent Card

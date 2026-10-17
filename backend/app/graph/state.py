@@ -16,6 +16,7 @@ class ChatState(MessagesState):
     business_id: str
     business_name: str
     business_description: str
+    business_timezone: str
     intent: Intent
     search_query: str
     context: list[dict]
@@ -27,7 +28,9 @@ class Route(BaseModel):
     intent: Intent = Field(
         description=(
             "knowledge: a question about the business (services, prices, hours, policies). "
-            "booking: wants to book, reschedule, cancel or check an appointment. "
+            "booking: wants to book, reschedule, cancel or check an appointment, OR is "
+            "continuing a booking conversation (choosing a service or time, giving their "
+            "name or phone number, answering the assistant's booking question). "
             "smalltalk: greetings, thanks, or anything else."
         )
     )

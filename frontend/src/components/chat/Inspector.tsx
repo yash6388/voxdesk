@@ -1,6 +1,17 @@
-import { Activity, BookOpen, CalendarDays, Gauge, MessageSquare, Search } from "lucide-react";
+import {
+  Activity,
+  BookOpen,
+  CalendarDays,
+  CircleCheck,
+  CircleX,
+  Gauge,
+  LoaderCircle,
+  MessageSquare,
+  Plug,
+  Search,
+} from "lucide-react";
 
-import type { UIMessage } from "@/components/chat/types";
+import type { ToolStep, UIMessage } from "@/components/chat/types";
 import { Badge } from "@/components/ui/primitives";
 import type { Route } from "@/lib/api";
 import { formatMs } from "@/lib/utils";
@@ -11,7 +22,11 @@ const INTENTS: Record<Route["intent"], { label: string; icon: React.ElementType;
     icon: BookOpen,
     note: "Routed to retrieval → grounded answer",
   },
-  booking: { label: "Booking", icon: CalendarDays, note: "Routed to the booking flow" },
+  booking: {
+    label: "Booking",
+    icon: CalendarDays,
+    note: "Routed to the booking agent → MCP tools",
+  },
   smalltalk: { label: "Small talk", icon: MessageSquare, note: "Answered directly, no retrieval" },
 };
 
@@ -48,6 +63,26 @@ export function Inspector({ message }: { message: UIMessage | null }) {
             </Section>
           )}
 
+          {message.tools && message.tools.length > 0 && (
+            <Section title={`Tool calls · MCP (${message.tools.length})`}>
+              <ol className="space-y-2">
+                {message.tools.map((t, i) => (
+                  <ToolCallItem key={i} step={t} />
+                ))}
+              </ol>
+            </Section>
+          )}
+
+          {message.confirmation && (
+            <Section title="Human in the loop">
+              <p className="text-xs text-muted">
+                {message.confirmation.state === "pending"
+                  ? "Paused — waiting for the customer to confirm."
+                  : `Customer ${message.confirmation.state} the action.`}
+              </p>
+            </Section>
+          )}
+
           {message.sources && (
             <Section title={`Sources (${message.sources.length})`}>
               <ol className="space-y-2">
@@ -73,6 +108,43 @@ export function Inspector({ message }: { message: UIMessage | null }) {
         </div>
       )}
     </div>
+  );
+}
+
+function ToolCallItem({ step }: { step: ToolStep }) {
+  const args = Object.entries(step.args);
+  const status = step.result?.status;
+  return (
+    <li className="rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 font-mono text-xs font-semibold">
+          <Plug className="size-3 text-indigo-600 dark:text-indigo-400" />
+          {step.name}
+        </span>
+        {status === "success" && <CircleCheck className="size-3.5 text-emerald-500" />}
+        {status === "error" && <CircleX className="size-3.5 text-red-500" />}
+        {!status && <LoaderCircle className="size-3.5 animate-spin text-muted" />}
+      </div>
+      {args.length > 0 && (
+        <div className="mt-2 space-y-0.5 font-mono text-[11px] text-muted">
+          {args.map(([k, v]) => (
+            <div key={k} className="truncate">
+              <span className="text-foreground/70">{k}</span>: {String(v)}
+            </div>
+          ))}
+        </div>
+      )}
+      {step.result && (
+        <p
+          className={
+            "mt-2 line-clamp-3 rounded bg-zinc-100 px-2 py-1 font-mono text-[11px] dark:bg-zinc-800/70 " +
+            (status === "error" ? "text-red-600" : "text-muted")
+          }
+        >
+          {step.result.content}
+        </p>
+      )}
+    </li>
   );
 }
 

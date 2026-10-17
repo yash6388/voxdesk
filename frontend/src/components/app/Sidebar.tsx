@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarDays,
   ChartColumn,
+  Clock,
   Menu,
   MessageSquare,
   Mic,
@@ -26,7 +27,8 @@ function workspaceNav(businessId: string): NavItem[] {
   return [
     { label: "Playground", href: base, icon: MessageSquare },
     { label: "Knowledge base", href: `${base}/knowledge`, icon: BookOpen },
-    { label: "Bookings", icon: CalendarDays, soon: true },
+    { label: "Services & hours", href: `${base}/services`, icon: Clock },
+    { label: "Bookings", href: `${base}/bookings`, icon: CalendarDays },
     { label: "Voice", icon: Mic, soon: true },
     { label: "Analytics", icon: ChartColumn, soon: true },
   ];

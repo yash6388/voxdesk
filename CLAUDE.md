@@ -12,7 +12,9 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - `frontend/` — Next.js (App Router, TypeScript, Tailwind)
 - `backend/` — FastAPI (Python 3.13, uv), LangGraph supervisor, Gemini API
 - `agents/` — A2A specialist services (knowledge_agent, booking_agent) — Phase 3
-- `mcp_servers/voxdesk_mcp/` — our own FastMCP server (slots/bookings) — Phase 2
+- `backend/app/mcp/` — our own FastMCP booking server, run separately: `uv run python -m app.mcp.server` (:8001)
+- `backend/app/booking/` — booking domain rules (shared by MCP server + owner REST API)
+- `backend/scripts/seed_demo.py` — demo salon data (`uv run python -m scripts.seed_demo`)
 - Postgres 16 + pgvector (app data, vectors, LangGraph checkpoints), Redis, Docker Compose
   - Host ports **5433** (Postgres) and **6380** (Redis) — owner has local Postgres/Redis on the default ports for work; never use 5432/6379
 

@@ -15,6 +15,8 @@ The frontend is a Next.js SaaS app with a public landing page and a dashboard:
 | `/dashboard` | **Businesses** — cards with gradient avatars, "New business" modal, empty state |
 | `/dashboard/b/[id]` | **Playground** — chat with the business's agent + **Agent Inspector** (route, rewritten query, sources with scores, latency) |
 | `/dashboard/b/[id]/knowledge` | **Knowledge base** — stats, drag-and-drop upload, documents table with live status |
+| `/dashboard/b/[id]/services` | **Services & hours** (Phase 2) — add/hide services, weekly opening hours editor |
+| `/dashboard/b/[id]/bookings` | **Bookings** (Phase 2) — today/upcoming/cancelled stats, tabs, owner cancel, auto-refresh, times in the business's timezone |
 
 ```
 frontend/src/
@@ -43,7 +45,11 @@ frontend/src/
 - **Tokens** in `globals.css` (`--background`, `--surface`, `--border`, `--muted`) exposed to
   Tailwind as `bg-surface`, `border-border`, `text-muted` — light and dark mode switch by changing
   token values only.
-- **Brand:** indigo → violet → fuchsia gradient (logo, primary buttons, user bubbles, CTA).
+- **Colour system:** zinc neutrals + one brand accent (indigo). The indigo → violet → fuchsia
+  **gradient is reserved for brand moments** (logo, hero headline, CTA banner); everything else
+  uses **solid indigo** (buttons, user bubbles) or a shared **soft tint** (`BRAND_TINT` in
+  `lib/utils.ts`: icon tiles, bot avatar). Status colours (green/amber/red) are only used for
+  status, never decoration — so they stay meaningful.
 - **Shared components** in `components/ui/` so every page looks consistent; icons from Lucide.
 - Small touches that make it feel like a product: skeleton loaders, fade-in animations, typing
   dots, empty states with a clear next action, live "API online" indicator.
@@ -118,6 +124,13 @@ id), then patches that message as events arrive:
 | `sources` | Inspector lists cited chunks with RRF scores; `[1]` in the answer becomes a citation chip |
 | `token` | Append text → the answer appears progressively; first token records **time-to-first-token** |
 | `error` | Show error inline |
+
+### Confirmation card (Phase 2)
+When the stream sends a `confirm` event, the assistant message shows a card (Service / Date / Time /
+Name / Phone) with **Confirm** and **Decline**. Clicking calls `POST /chat/resume` via the same SSE
+parser (`streamEvents` is shared by `streamChat` and `resumeChat`), and the outcome streams into a
+new assistant message. While a confirmation is pending the composer is locked; after a reload the
+history endpoint returns `pending_confirmation` so the card comes back.
 
 ### The Agent Inspector
 Clicking any reply shows, for that turn: the **route** (knowledge / booking / small talk), the

@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     retrieval_candidates: int = 20
     max_upload_mb: int = 10
 
+    # --- Booking ---
+    slot_step_minutes: int = 30
+    booking_horizon_days: int = 60
+
+    # --- MCP server (booking tools) ---
+    mcp_host: str = "127.0.0.1"
+    mcp_port: int = 8001
+    mcp_url: str = "http://127.0.0.1:8001/mcp"
+    # Shared secret clients must send as `Authorization: Bearer <key>`.
+    mcp_api_key: str = "dev-mcp-key-change-me"
+
     @property
     def psycopg_url(self) -> str:
         """Plain postgres URL for libraries using psycopg (LangGraph checkpointer)."""

@@ -15,6 +15,7 @@ import { Logo } from "@/components/Logo";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ButtonLink } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/primitives";
+import { BRAND_TINT, cn } from "@/lib/utils";
 
 const FEATURES = [
   {
@@ -38,13 +39,13 @@ const FEATURES = [
   {
     icon: CalendarDays,
     title: "Books appointments",
-    body: "Checks availability and books, reschedules or cancels through MCP tools — with a confirmation step.",
-    soon: true,
+    body: "Checks real availability and books, reschedules or cancels — always asking the customer to confirm first.",
+    soon: false,
   },
   {
     icon: Network,
     title: "Specialist agents",
-    body: "A supervisor delegates to knowledge and booking agents over the A2A protocol.",
+    body: "Every request goes to the right specialist — one that knows your business, one that manages your calendar.",
     soon: true,
   },
   {
@@ -109,7 +110,7 @@ export default function Landing() {
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted">
             VoxDesk gives your salon, clinic or restaurant an AI agent that answers customers from your
-            own documents — and soon books their appointments, by chat or voice.
+            own documents and books their appointments — by chat today, by voice soon.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/dashboard" size="lg">
@@ -142,7 +143,7 @@ export default function Landing() {
               className="group rounded-2xl border border-border bg-surface p-6 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/5"
             >
               <div className="flex items-center justify-between">
-                <span className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 text-indigo-600 dark:text-indigo-400">
+                <span className={cn("flex size-10 items-center justify-center rounded-xl", BRAND_TINT)}>
                   <Icon className="size-5" />
                 </span>
                 {soon && <Badge>Coming soon</Badge>}
@@ -206,7 +207,7 @@ function ChatPreview() {
       <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 blur-2xl" />
       <div className="animate-float rounded-2xl border border-border bg-surface p-5 shadow-2xl shadow-indigo-500/10">
         <div className="flex items-center gap-3 border-b border-border pb-4">
-          <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
+          <span className={cn("flex size-9 items-center justify-center rounded-full", BRAND_TINT)}>
             <Bot className="size-5" />
           </span>
           <div>
@@ -217,7 +218,7 @@ function ChatPreview() {
           </div>
         </div>
         <div className="space-y-3 pt-4 text-sm">
-          <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-sm bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-white">
+          <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-sm bg-indigo-600 text-white dark:bg-indigo-500 px-4 py-2">
             How much is a keratin treatment?
           </div>
           <div className="w-fit max-w-[85%]">
@@ -229,7 +230,7 @@ function ChatPreview() {
               </span>
             </div>
           </div>
-          <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-sm bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-white">
+          <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-sm bg-indigo-600 text-white dark:bg-indigo-500 px-4 py-2">
             And how long does it take?
           </div>
           <div className="w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-zinc-100 px-4 py-2 dark:bg-zinc-800">

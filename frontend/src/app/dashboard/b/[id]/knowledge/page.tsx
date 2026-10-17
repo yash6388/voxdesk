@@ -16,7 +16,7 @@ import { useRef, useState } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Badge, Card, PageHeader } from "@/components/ui/primitives";
 import type { VoxDocument } from "@/lib/api";
-import { cn, formatDate } from "@/lib/utils";
+import { BRAND_TINT, cn, formatDate } from "@/lib/utils";
 import { useDocuments } from "@/lib/useDocuments";
 
 const ACCEPT = ".pdf,.txt,.md";
@@ -75,7 +75,7 @@ export default function KnowledgePage() {
 function Stat({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: number }) {
   return (
     <Card className="flex items-center gap-4 p-5">
-      <span className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 text-indigo-600 dark:text-indigo-400">
+      <span className={cn("flex size-10 items-center justify-center rounded-xl", BRAND_TINT)}>
         <Icon className="size-5" />
       </span>
       <div>
@@ -116,7 +116,7 @@ function Dropzone({ uploading, onFiles }: { uploading: boolean; onFiles: (files:
           : "border-border bg-surface hover:border-indigo-300 hover:bg-indigo-50/30 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/5",
       )}
     >
-      <span className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25">
+      <span className={cn("flex size-12 items-center justify-center rounded-full", BRAND_TINT)}>
         {uploading ? <LoaderCircle className="size-5 animate-spin" /> : <FileUp className="size-5" />}
       </span>
       <p className="mt-4 font-medium">{uploading ? "Uploading…" : "Drop files here or click to upload"}</p>

@@ -3,6 +3,10 @@ export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
+/** Soft brand tint for icon tiles and avatars — the one accent style used outside hero moments. */
+export const BRAND_TINT =
+  "bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20";
+
 /** Deterministic gradient for a business avatar, based on its name. */
 const AVATAR_GRADIENTS = [
   "from-indigo-500 to-violet-500",

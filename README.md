@@ -24,7 +24,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams (system overview
 ```
 voxdesk/
 ├── frontend/            Next.js app (chat, voice UI, dashboard)
-├── backend/             FastAPI gateway + LangGraph supervisor
+├── backend/             FastAPI API, LangGraph agents, MCP booking server (app/mcp)
 ├── docs/                Plan, progress, design notes
 ├── samples/             Example business documents for demos and tests
 └── docker-compose.yml   Postgres (pgvector) + Redis
@@ -46,7 +46,12 @@ docker compose up -d
 cd backend
 uv sync
 uv run alembic upgrade head       # create/upgrade database tables
+uv run python -m scripts.seed_demo   # optional: demo salon with services, hours and a document
 uv run uvicorn app.main:app --reload
+
+# 3b. MCP booking server → http://localhost:8001/mcp (separate terminal)
+cd backend
+uv run python -m app.mcp.server
 
 # 4. Frontend → http://localhost:3000
 cd frontend
@@ -61,6 +66,11 @@ Open http://localhost:3000 → **Open dashboard** → **New business** → uploa
 *"How much is a keratin treatment?"*, then *"And how long does it take?"*.
 The **Agent Inspector** shows the routing decision, the rewritten search query, the cited sources
 and the latency for each reply.
+
+To try booking: run the seed script (or add services and hours under **Services & hours**), then in
+the Playground say *"Book a men's haircut tomorrow afternoon"*. The agent checks real availability
+through the MCP server, asks for your name and phone, and shows a **confirmation card** before
+booking. Confirmed bookings appear on the **Bookings** page.
 
 ## Try it (API)
 

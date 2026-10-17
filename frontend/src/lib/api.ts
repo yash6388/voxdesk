@@ -8,6 +8,30 @@ export type Business = {
   id: string;
   name: string;
   description: string;
+  timezone: string;
+  currency: string;
+  created_at: string;
+};
+
+export type Service = {
+  id: string;
+  name: string;
+  description: string;
+  duration_minutes: number;
+  price: number | null;
+  active: boolean;
+};
+
+export type HoursDay = { weekday: number; opens_at: string; closes_at: string };
+
+export type Booking = {
+  id: string;
+  service_name: string;
+  customer_name: string;
+  customer_phone: string;
+  start_at: string;
+  end_at: string;
+  status: "confirmed" | "cancelled";
   created_at: string;
 };
 
@@ -30,10 +54,20 @@ export type Source = { filename: string; chunk_index: number; content: string; s
 
 export type Route = { intent: "knowledge" | "booking" | "smalltalk"; search_query: string };
 
+export type ToolCall = { name: string; args: Record<string, unknown> };
+export type ToolResult = { name: string; status: "success" | "error"; content: string };
+
+/** An action the agent wants to take that needs the customer's approval. */
+export type PendingAction = { title: string; details: Record<string, string> };
+export type Confirmation = { actions: PendingAction[] };
+
 export type ChatEvent =
   | { event: "meta"; data: { thread_id: string } }
   | { event: "route"; data: Route }
   | { event: "sources"; data: Source[] }
+  | { event: "tool_call"; data: ToolCall }
+  | { event: "tool_result"; data: ToolResult }
+  | { event: "confirm"; data: Confirmation }
   | { event: "token"; data: { text: string } }
   | { event: "error"; data: { message: string } }
   | { event: "done"; data: Record<string, never> };
@@ -80,23 +114,63 @@ export const deleteDocument = (businessId: string, documentId: string) =>
   request<void>(`/businesses/${businessId}/documents/${documentId}`, { method: "DELETE" });
 
 export const getHistory = (businessId: string, threadId: string) =>
-  request<{ thread_id: string; messages: ChatMessage[] }>(`/chat/${businessId}/${threadId}`);
+  request<{
+    thread_id: string;
+    messages: ChatMessage[];
+    pending_confirmation: Confirmation | null;
+  }>(`/chat/${businessId}/${threadId}`);
 
-/**
- * POST /chat and yield Server-Sent Events as they arrive.
- * (The browser's EventSource only supports GET, so we parse the stream ourselves.)
- */
-export async function* streamChat(
+export const listServices = (businessId: string) =>
+  request<Service[]>(`/businesses/${businessId}/services`);
+export const createService = (
+  businessId: string,
+  body: { name: string; description: string; duration_minutes: number; price: number | null },
+) => request<Service>(`/businesses/${businessId}/services`, json(body));
+export const setServiceActive = (businessId: string, serviceId: string, active: boolean) =>
+  request<Service>(`/businesses/${businessId}/services/${serviceId}?active=${active}`, {
+    method: "PATCH",
+  });
+
+export const getHours = (businessId: string) =>
+  request<HoursDay[]>(`/businesses/${businessId}/hours`);
+export const saveHours = (businessId: string, days: HoursDay[]) =>
+  request<HoursDay[]>(`/businesses/${businessId}/hours`, { ...json({ days }), method: "PUT" });
+
+export const listBookings = (businessId: string) =>
+  request<Booking[]>(`/businesses/${businessId}/bookings`);
+export const cancelBookingAsOwner = (businessId: string, bookingId: string) =>
+  request<Booking>(`/businesses/${businessId}/bookings/${bookingId}/cancel`, { method: "POST" });
+
+/** POST /chat — send a customer message and stream the reply. */
+export const streamChat = (
   businessId: string,
   message: string,
   threadId: string | null,
   signal?: AbortSignal,
+) => streamEvents("/chat", { business_id: businessId, message, thread_id: threadId }, signal);
+
+/** POST /chat/resume — approve or decline the agent's pending action and stream the outcome. */
+export const resumeChat = (
+  businessId: string,
+  threadId: string,
+  approved: boolean,
+  signal?: AbortSignal,
+) => streamEvents("/chat/resume", { business_id: businessId, thread_id: threadId, approved }, signal);
+
+/**
+ * POST and yield Server-Sent Events as they arrive.
+ * (The browser's EventSource only supports GET, so we parse the stream ourselves.)
+ */
+async function* streamEvents(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
-  const res = await fetch(`${API_URL}/chat`, {
-    ...json({ business_id: businessId, message, thread_id: threadId }),
-    signal,
-  });
-  if (!res.ok || !res.body) throw new Error(`Chat failed: ${res.status}`);
+  const res = await fetch(`${API_URL}${path}`, { ...json(body), signal });
+  if (!res.ok || !res.body) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(detail.detail ?? `Request failed: ${res.status}`);
+  }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

@@ -1,14 +1,24 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, time
+from zoneinfo import available_timezones
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.db.models import DocumentStatus
+from app.db.models import BookingStatus, DocumentStatus
 
 
 class BusinessCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=2000)
+    timezone: str = "Asia/Kolkata"
+    currency: str = Field(default="INR", min_length=3, max_length=3)
+
+    @field_validator("timezone")
+    @classmethod
+    def valid_timezone(cls, v: str) -> str:
+        if v not in available_timezones():
+            raise ValueError("Unknown timezone")
+        return v
 
 
 class BusinessOut(BaseModel):
@@ -17,6 +27,8 @@ class BusinessOut(BaseModel):
     id: uuid.UUID
     name: str
     description: str
+    timezone: str
+    currency: str
     created_at: datetime
 
 
@@ -62,6 +74,67 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class ChatResume(BaseModel):
+    business_id: uuid.UUID
+    thread_id: str
+    approved: bool
+
+
 class ChatHistory(BaseModel):
     thread_id: str
     messages: list[ChatMessage]
+    pending_confirmation: dict | None = None
+
+
+class ServiceCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=1000)
+    duration_minutes: int = Field(ge=5, le=480)
+    price: int | None = Field(default=None, ge=0)
+
+
+class ServiceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    description: str
+    duration_minutes: int
+    price: int | None
+    active: bool
+
+
+class HoursDay(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    weekday: int = Field(ge=0, le=6, description="0 = Monday … 6 = Sunday")
+    opens_at: time
+    closes_at: time
+
+    @model_validator(mode="after")
+    def opens_before_closes(self):
+        if self.opens_at >= self.closes_at:
+            raise ValueError("opens_at must be before closes_at")
+        return self
+
+
+class HoursUpdate(BaseModel):
+    days: list[HoursDay] = Field(description="Days not listed are closed.")
+
+    @field_validator("days")
+    @classmethod
+    def unique_weekdays(cls, v: list[HoursDay]) -> list[HoursDay]:
+        if len({d.weekday for d in v}) != len(v):
+            raise ValueError("Each weekday may appear only once")
+        return v
+
+
+class BookingOut(BaseModel):
+    id: uuid.UUID
+    service_name: str
+    customer_name: str
+    customer_phone: str
+    start_at: datetime
+    end_at: datetime
+    status: BookingStatus
+    created_at: datetime

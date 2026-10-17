@@ -8,10 +8,11 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from app.api import businesses, chat, documents, health
+from app.api import booking, businesses, chat, documents, health
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.graph.builder import build_graph
+from app.graph.tools import MCPToolProvider
 from app.rag.embeddings import get_embedder
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -38,15 +39,19 @@ async def lifespan(app: FastAPI):
                 google_api_key=settings.google_api_key,
                 temperature=0.3,
                 thinking_budget=0,  # no "thinking" pass: lower latency for chat/voice
+                # Fail fast: a customer shouldn't wait ~35 s of silent backoff on a 429.
+                max_retries=2,
             ),
             router_llm=ChatGoogleGenerativeAI(
                 model=settings.router_model,
                 google_api_key=settings.google_api_key,
                 temperature=0,
                 thinking_budget=0,
+                max_retries=2,
             ),
             embedder=get_embedder(),
             session_factory=SessionLocal,
+            tool_provider=MCPToolProvider(settings.mcp_url, settings.mcp_api_key),
             checkpointer=checkpointer,
         )
         yield
@@ -68,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(businesses.router)
     app.include_router(documents.router)
+    app.include_router(booking.router)
     app.include_router(chat.router)
     return app
 

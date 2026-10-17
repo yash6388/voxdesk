@@ -3,15 +3,16 @@
 import { Bot, RotateCcw, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { ConfirmCard } from "@/components/chat/ConfirmCard";
 import type { UIMessage } from "@/components/chat/types";
-import { type Source, getHistory, streamChat } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { type ChatEvent, type Source, getHistory, resumeChat, streamChat } from "@/lib/api";
+import { BRAND_TINT, cn } from "@/lib/utils";
 
 const SUGGESTIONS = [
   "What are your opening hours?",
   "How much does a haircut cost?",
+  "Book a haircut for tomorrow afternoon",
   "What's your cancellation policy?",
-  "Is there parking nearby?",
 ];
 
 // The thread id is remembered per business so a page reload continues the same conversation.
@@ -51,6 +52,7 @@ export function ChatPanel({
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pending = messages.some((m) => m.confirmation?.state === "pending");
 
   // Restore the previous conversation from the server-side checkpoint.
   useEffect(() => {
@@ -58,9 +60,19 @@ export function ChatPanel({
     if (!saved) return;
     setThreadId(saved);
     getHistory(businessId, saved)
-      .then((h) =>
-        setMessages(h.messages.map((m, i) => ({ ...m, id: `history-${i}` }))),
-      )
+      .then((h) => {
+        const restored: UIMessage[] = h.messages.map((m, i) => ({ ...m, id: `history-${i}` }));
+        // A confirmation was waiting when the page closed: show the card again.
+        if (h.pending_confirmation) {
+          restored.push({
+            id: "history-pending",
+            role: "assistant",
+            content: "",
+            confirmation: { ...h.pending_confirmation, state: "pending" },
+          });
+        }
+        setMessages(restored);
+      })
       .catch(() => saveThreadId(businessId, null));
     return () => abortRef.current?.abort();
   }, [businessId]);
@@ -75,28 +87,15 @@ export function ChatPanel({
     if (selected) onSelect(selected);
   }, [messages, selectedId, onSelect]);
 
-  async function send(text: string) {
-    text = text.trim();
-    if (!text || streaming) return;
-
-    const assistantId = crypto.randomUUID();
+  /** Apply streamed events to one assistant message. Shared by new messages and resumes. */
+  async function consume(events: AsyncGenerator<ChatEvent>, assistantId: string) {
     const patch = (fn: (m: UIMessage) => UIMessage) =>
       setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)));
 
-    setInput("");
-    setStreaming(true);
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", content: text },
-      { id: assistantId, role: "assistant", content: "", timing: {} },
-    ]);
-    onSelect({ id: assistantId, role: "assistant", content: "" });
-
     const started = performance.now();
-    const controller = new AbortController();
-    abortRef.current = controller;
+    setStreaming(true);
     try {
-      for await (const ev of streamChat(businessId, text, threadId, controller.signal)) {
+      for await (const ev of events) {
         switch (ev.event) {
           case "meta":
             setThreadId(ev.data.thread_id);
@@ -108,11 +107,29 @@ export function ChatPanel({
           case "sources":
             patch((m) => ({ ...m, sources: ev.data }));
             break;
+          case "tool_call":
+            patch((m) => ({ ...m, tools: [...(m.tools ?? []), { ...ev.data }] }));
+            break;
+          case "tool_result":
+            patch((m) => {
+              // Attach the result to the first call of that tool still waiting for one.
+              const tools = [...(m.tools ?? [])];
+              const i = tools.findIndex((t) => t.name === ev.data.name && !t.result);
+              if (i >= 0) tools[i] = { ...tools[i], result: ev.data };
+              return { ...m, tools };
+            });
+            break;
+          case "confirm":
+            patch((m) => ({ ...m, confirmation: { ...ev.data, state: "pending" } }));
+            break;
           case "token":
             patch((m) => ({
               ...m,
               content: m.content + ev.data.text,
-              timing: { ...m.timing, firstTokenMs: m.timing?.firstTokenMs ?? performance.now() - started },
+              timing: {
+                ...m.timing,
+                firstTokenMs: m.timing?.firstTokenMs ?? performance.now() - started,
+              },
             }));
             break;
           case "error":
@@ -121,11 +138,44 @@ export function ChatPanel({
         }
       }
     } catch (err) {
-      if (!controller.signal.aborted) patch((m) => ({ ...m, error: (err as Error).message }));
+      if (!abortRef.current?.signal.aborted) {
+        patch((m) => ({ ...m, error: (err as Error).message }));
+      }
     } finally {
       patch((m) => ({ ...m, timing: { ...m.timing, totalMs: performance.now() - started } }));
       setStreaming(false);
     }
+  }
+
+  function startAssistantMessage(): string {
+    const id = crypto.randomUUID();
+    setMessages((prev) => [...prev, { id, role: "assistant", content: "", timing: {} }]);
+    onSelect({ id, role: "assistant", content: "" });
+    abortRef.current = new AbortController();
+    return id;
+  }
+
+  async function send(text: string) {
+    text = text.trim();
+    if (!text || streaming || pending) return;
+    setInput("");
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: text }]);
+    const id = startAssistantMessage();
+    await consume(streamChat(businessId, text, threadId, abortRef.current!.signal), id);
+  }
+
+  /** Customer clicked Confirm/Decline on the agent's pending action. */
+  async function decide(messageId: string, approved: boolean) {
+    if (!threadId || streaming) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId && m.confirmation
+          ? { ...m, confirmation: { ...m.confirmation, state: approved ? "approved" : "declined" } }
+          : m,
+      ),
+    );
+    const id = startAssistantMessage();
+    await consume(resumeChat(businessId, threadId, approved, abortRef.current!.signal), id);
   }
 
   function newChat() {
@@ -160,17 +210,29 @@ export function ChatPanel({
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
         {messages.length === 0 && <Welcome businessName={businessName} onPick={send} />}
-        {messages.map((m) =>
+        {messages.map((m, i) =>
           m.role === "user" ? (
             <UserBubble key={m.id} text={m.content} />
           ) : (
-            <AssistantBubble
-              key={m.id}
-              message={m}
-              selected={m.id === selectedId}
-              pending={streaming && !m.content && !m.error}
-              onClick={() => onSelect(m)}
-            />
+            <div key={m.id} className="space-y-3">
+              {(m.content || m.error || !m.confirmation) && (
+                <AssistantBubble
+                  message={m}
+                  selected={m.id === selectedId}
+                  typing={streaming && i === messages.length - 1 && !m.content && !m.error}
+                  onClick={() => onSelect(m)}
+                />
+              )}
+              {m.confirmation && (
+                <div className="pl-10">
+                  <ConfirmCard
+                    confirmation={m.confirmation}
+                    busy={streaming}
+                    onDecide={(approved) => decide(m.id, approved)}
+                  />
+                </div>
+              )}
+            </div>
           ),
         )}
       </div>
@@ -187,13 +249,16 @@ export function ChatPanel({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask what a customer would ask…"
+            disabled={pending}
+            placeholder={
+              pending ? "Confirm or decline the action above…" : "Ask what a customer would ask…"
+            }
             className="h-9 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-zinc-400"
           />
           <button
-            disabled={streaming || !input.trim()}
+            disabled={streaming || pending || !input.trim()}
             aria-label="Send"
-            className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white transition hover:opacity-90 disabled:opacity-40"
+            className="flex size-9 items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition disabled:opacity-40"
           >
             <Send className="size-4" />
           </button>
@@ -207,7 +272,8 @@ function BotAvatar({ small }: { small?: boolean }) {
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white",
+        "flex shrink-0 items-center justify-center rounded-full",
+        BRAND_TINT,
         small ? "size-7" : "size-9",
       )}
     >
@@ -219,7 +285,7 @@ function BotAvatar({ small }: { small?: boolean }) {
 function Welcome({ businessName, onPick }: { businessName: string; onPick: (q: string) => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
-      <span className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/30">
+      <span className={cn("flex size-14 items-center justify-center rounded-2xl", BRAND_TINT)}>
         <Bot className="size-7" />
       </span>
       <h3 className="mt-4 text-lg font-semibold">Test {businessName}’s agent</h3>
@@ -244,7 +310,7 @@ function Welcome({ businessName, onPick }: { businessName: string; onPick: (q: s
 function UserBubble({ text }: { text: string }) {
   return (
     <div className="flex animate-fade-in justify-end">
-      <div className="max-w-[80%] rounded-2xl rounded-br-md bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm text-white shadow-sm">
+      <div className="max-w-[80%] rounded-2xl rounded-br-md bg-indigo-600 text-white dark:bg-indigo-500 px-4 py-2.5 text-sm shadow-sm">
         {text}
       </div>
     </div>
@@ -254,12 +320,12 @@ function UserBubble({ text }: { text: string }) {
 function AssistantBubble({
   message: m,
   selected,
-  pending,
+  typing,
   onClick,
 }: {
   message: UIMessage;
   selected: boolean;
-  pending: boolean;
+  typing: boolean;
   onClick: () => void;
 }) {
   return (
@@ -274,7 +340,7 @@ function AssistantBubble({
             : "border-transparent bg-zinc-100 hover:border-zinc-200 dark:bg-zinc-800/70 dark:hover:border-zinc-700",
         )}
       >
-        {pending ? <TypingDots /> : <WithCitations text={m.content} sources={m.sources} />}
+        {typing ? <TypingDots /> : <WithCitations text={m.content} sources={m.sources} />}
         {m.error && <span className="text-red-600">{m.error}</span>}
       </button>
     </div>

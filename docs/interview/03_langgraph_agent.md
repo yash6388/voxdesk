@@ -1,6 +1,11 @@
 # 03 — The LangGraph Agent: Routing, Memory, Streaming
 
 > Phase 1. How a customer message flows through the agent and comes back as a streamed answer.
+>
+> **Phase 2 update:** the `booking` placeholder is now a real **booking agent** (`booking_agent ⇄ tools`
+> using MCP tools, with a `confirm` node that pauses via `interrupt()` for write actions). The router
+> and respond nodes now read a *conversation view* (customer + assistant text only, no tool
+> messages). See [`06_mcp.md`](06_mcp.md) for the full booking flow.
 
 ---
 

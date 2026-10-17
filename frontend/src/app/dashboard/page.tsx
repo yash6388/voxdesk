@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Card, Input, Label, PageHeader, Textarea } from "@/components/ui/primitives";
 import { type Business, createBusiness, listBusinesses } from "@/lib/api";
-import { avatarGradient, cn, formatDate, initials } from "@/lib/utils";
+import { BRAND_TINT, avatarGradient, cn, formatDate, initials } from "@/lib/utils";
 
 export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<Business[] | null>(null);
@@ -88,7 +88,7 @@ export default function BusinessesPage() {
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <Card className="flex flex-col items-center px-6 py-16 text-center">
-      <span className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 text-indigo-600 dark:text-indigo-400">
+      <span className={cn("flex size-14 items-center justify-center rounded-2xl", BRAND_TINT)}>
         <Building2 className="size-7" />
       </span>
       <h3 className="mt-5 text-lg font-semibold">Create your first business</h3>
