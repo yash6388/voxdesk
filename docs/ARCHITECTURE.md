@@ -3,8 +3,8 @@
 > Living document — updated after every phase. Diagrams are [Mermaid](https://mermaid.js.org/):
 > GitHub renders them automatically, and draw.io can import them (see the last section).
 >
-> **Status:** Phase 3 built — supervisor + two A2A specialist agents, RAG, MCP booking with
-> human-in-the-loop. Components from later phases are marked *planned*.
+> **Status:** Phase 4 built — voice (local STT/TTS, pluggable ElevenLabs), supervisor + two A2A
+> specialist agents, RAG, MCP booking with human-in-the-loop. *Planned* = Phase 5.
 
 ---
 
@@ -23,7 +23,7 @@ flowchart LR
 
     subgraph BE["API · FastAPI"]
         api["REST + SSE API"]
-        voice["Voice pipeline<br/>STT / TTS"]
+        voice["Voice WebSocket<br/>STT · TTS per sentence"]
         sup["Supervisor graph<br/>route · small talk<br/>memory · confirm ⏸"]
     end
 
@@ -44,8 +44,8 @@ flowchart LR
     customer --> ui
     owner --> ui
     ui -- "HTTP / SSE" --> api
-    ui -. "WebSocket audio" .-> voice
-    voice -.-> sup
+    ui -- "WebSocket audio" --> voice
+    voice --> sup
     api --> sup
     sup -- "A2A · JSON-RPC + SSE" --> ka
     sup -- "A2A · JSON-RPC + SSE" --> ba
@@ -60,7 +60,7 @@ flowchart LR
     api -.-> redis
 
     classDef planned stroke-dasharray: 5 5
-    class voice,redis planned
+    class redis planned
 ```
 
 | Component | Responsibility | Tech | Status |
@@ -72,7 +72,7 @@ flowchart LR
 | Booking agent | A2A service: booking graph (LLM + MCP tools + guardrails), own memory, `input-required` for confirmation | a2a-sdk, LangGraph, langchain-mcp-adapters | ✅ Phase 3 |
 | MCP server | Booking tools usable by any MCP client; auth + tenant headers | FastMCP (`mcp` SDK), Streamable HTTP | ✅ Phase 2 |
 | Booking domain | Availability, validation, booking rules shared by MCP + REST | SQLAlchemy, Postgres exclusion constraint | ✅ Phase 2 |
-| Voice | Speech in → agent → speech out | WebSocket, STT/TTS (TBD) | ⏳ Phase 4 |
+| Voice | `/voice` WebSocket: speech → STT → supervisor → per-sentence TTS → audio; spoken confirmation; barge-in; latency metrics | faster-whisper + Kokoro (local, default) or ElevenLabs | ✅ Phase 4 |
 | PostgreSQL | System of record + vectors + checkpoints (supervisor and booking agent) | Postgres 16 + pgvector + btree_gist | ✅ |
 | Redis | Cache, rate limiting, pub/sub | Redis 7 | Running, used from Phase 5 |
 
@@ -252,7 +252,36 @@ sequenceDiagram
     S-->>B: SSE tokens "You're booked…", done
 ```
 
-### 5.3 Document ingestion
+### 5.3 Voice turn (sentence-by-sentence speech)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant V as API /voice (WebSocket)
+    participant STT as STT (faster-whisper)
+    participant S as Supervisor + A2A agents
+    participant TTS as TTS (Kokoro)
+
+    B->>V: binary: recorded utterance (webm/opus)
+    V->>STT: decode to 16 kHz mono, transcribe
+    STT-->>V: "Do you have parking?"
+    V-->>B: transcript
+    V->>S: run turn (same graph as chat)
+    loop tokens stream in
+        S-->>V: token
+        V-->>B: token (live transcript)
+        Note over V: sentence complete → queue for speaker task
+    end
+    loop each complete sentence, while the agent keeps generating
+        V->>TTS: synthesize sentence 1
+        TTS-->>V: WAV
+        V-->>B: audio meta + binary frame (plays immediately)
+    end
+    V-->>B: timing {stt, first token, first audio, total}, turn_end
+```
+
+### 5.4 Document ingestion
 
 ```mermaid
 sequenceDiagram
@@ -366,7 +395,11 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 | Booking confirmation = A2A `input-required` + supervisor `interrupt()` | HITL maps onto the protocol's task lifecycle; UI/API contract unchanged |
 | Business info as metadata on every A2A message | A2A doesn't persist request metadata across messages |
 | Agent Card public, JSON-RPC bearer-protected | Discovery is the point of a card; calling needs credentials |
-| SSE for chat, WebSocket for voice (planned) | One-way token stream vs two-way audio stream |
+| SSE for chat, WebSocket for voice | One-way token stream vs two-way audio + control stream |
+| Local STT/TTS by default, ElevenLabs by config | Free/private/no quotas for dev; best quality when needed; same interface |
+| Per-sentence TTS pipelined with LLM streaming | Caller hears the first sentence long before the answer is finished |
+| LLM fallback: Gemini → any OpenAI-compatible provider (chat only, not embeddings) | Survive provider outages/quotas; embeddings must stay one model to remain comparable |
+| Decode audio with PyAV directly | faster-whisper's helper is incompatible with current PyAV; also format-agnostic |
 
 ---
 

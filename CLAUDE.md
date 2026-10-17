@@ -14,9 +14,11 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - `backend/app/agents/` — A2A specialist services: knowledge (:8101), booking (:8102); `backend/app/a2a/` — A2A server/client helpers
 - `backend/app/graph/` — `supervisor.py` (API graph), `booking_graph.py` (runs in booking agent)
 - `backend/scripts/dev_services.sh` — starts MCP + both agents; API runs separately
+- `backend/app/voice/` + `app/api/voice.py` — voice WebSocket; STT/TTS providers (`STT_PROVIDER`/`TTS_PROVIDER`: local | elevenlabs); models via `uv run python -m scripts.download_voice_models` (gitignored `backend/data/models`)
 - `backend/app/mcp/` — our own FastMCP booking server, run separately: `uv run python -m app.mcp.server` (:8001)
 - `backend/app/booking/` — booking domain rules (shared by MCP server + owner REST API)
 - `backend/scripts/seed_demo.py` — demo salon data (`uv run python -m scripts.seed_demo`)
+- `backend/app/llm.py` — all chat models (Gemini primary; OpenAI-compatible fallback — Groq/OpenRouter/HF — when `FALLBACK_API_KEY` is set)
 - Postgres 16 + pgvector (app data, vectors, LangGraph checkpoints), Redis, Docker Compose
   - Host ports **5433** (Postgres) and **6380** (Redis) — owner has local Postgres/Redis on the default ports for work; never use 5432/6379
 
@@ -30,4 +32,4 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - Never run `git commit`/`git push` — give the owner the commands instead.
 
 ## Out of scope for now
-- Twilio / phone calls (dropped; voice pipeline is transport-agnostic so it can be added later as an adapter).
+- Twilio / phone calls (dropped; the voice pipeline is transport-agnostic so it can be added later as an adapter).

@@ -114,11 +114,12 @@ Each phase ends with something demoable and a commit.
 - Escalation path → human handoff (flag conversation in dashboard) — moved to Phase 5
 - *(Built: see `docs/PROGRESS.md` and `docs/interview/07_a2a.md`)*
 
-### Phase 4 — Voice
+### Phase 4 — Voice ✅
 - WebSocket audio endpoint; browser mic capture in Next.js
-- STT interface (faster-whisper) → graph → TTS interface (Kokoro / ElevenLabs), streamed back
+- STT interface (faster-whisper) → graph → TTS interface (Kokoro / ElevenLabs), streamed back (built: local default, ElevenLabs by config)
 - Push-to-talk first; then VAD + barge-in (user interrupts the agent)
 - Measure latency per stage (STT, LLM first token, TTS first audio)
+- *(Built: push-to-talk + sentence streaming + barge-in + spoken confirmation; hands-free VAD left as an upgrade. See `docs/interview/08_voice.md`)*
 
 ### Phase 5 — Production polish
 - Langfuse tracing; eval suite (retrieval hit rate, tool-call accuracy, end-to-end latency)

@@ -17,7 +17,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams (system overview
 | Agents | LangGraph, LangChain, Gemini |
 | Protocols | MCP (FastMCP), A2A (a2a-sdk) |
 | Data | PostgreSQL + pgvector, Redis |
-| Voice | Speech-to-text + text-to-speech streaming pipeline |
+| Voice | faster-whisper (STT) + Kokoro (TTS) locally, or ElevenLabs; WebSocket streaming |
 
 ## Project structure
 
@@ -47,6 +47,7 @@ cd backend
 uv sync
 uv run alembic upgrade head       # create/upgrade database tables
 uv run python -m scripts.seed_demo   # optional: demo salon with services, hours and a document
+uv run python -m scripts.download_voice_models   # one-time: local speech models (~250 MB)
 uv run uvicorn app.main:app --reload
 
 # 3b. Supporting services (separate terminal): MCP server :8001,
@@ -75,6 +76,14 @@ To try booking: run the seed script (or add services and hours under **Services 
 the Playground say *"Book a men's haircut tomorrow afternoon"*. The agent checks real availability
 through the MCP server, asks for your name and phone, and shows a **confirmation card** before
 booking. Confirmed bookings appear on the **Bookings** page.
+
+## Try it (voice)
+
+Open **Voice** in a business's sidebar, allow the microphone, **hold the button** and ask a question
+or book an appointment. Answers are spoken sentence by sentence; say "yes" or "no" to confirm a
+booking; press the button while the agent is speaking to interrupt it. Speech runs locally
+(faster-whisper + Kokoro) by default — set `TTS_PROVIDER=elevenlabs` and `ELEVENLABS_API_KEY` in
+`backend/.env` for ElevenLabs voices.
 
 ## Try it (API)
 

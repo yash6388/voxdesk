@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,18 @@ class Settings(BaseSettings):
     chat_model: str = "gemini-2.5-flash"
     router_model: str = "gemini-2.5-flash-lite"
     embedding_model: str = "gemini-embedding-001"
+
+    # --- Fallback LLM (any OpenAI-compatible provider: Groq, OpenRouter, Hugging Face…) ---
+    # Used automatically when Gemini fails (e.g. free-tier 429). Off when no key is set.
+    fallback_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "FALLBACK_API_KEY", "HF_TOKEN", "HUGGINGFACE_API_KEY", "HUGGINGFACEHUB_API_TOKEN"
+        ),
+    )
+    fallback_base_url: str = "https://router.huggingface.co/v1"
+    # Must support tool calling (the booking agent uses tools).
+    fallback_model: str = "meta-llama/Llama-3.3-70B-Instruct"
     embedding_dim: int = 768
 
     # --- RAG ---
@@ -48,6 +61,19 @@ class Settings(BaseSettings):
     booking_agent_url: str = "http://127.0.0.1:8102"
     # Shared secret the supervisor sends to the agents as `Authorization: Bearer <key>`.
     a2a_api_key: str = "dev-a2a-key-change-me"
+
+    # --- Voice (Phase 4) ---
+    # "local" = open-source models on this machine (free, private, no quotas);
+    # "elevenlabs" = ElevenLabs API (best quality; needs ELEVENLABS_API_KEY).
+    stt_provider: str = "local"
+    tts_provider: str = "local"
+    whisper_model: str = "base.en"  # tiny.en | base.en | small.en — bigger = better, slower
+    kokoro_voice: str = "af_heart"
+    voice_models_dir: str = "data/models"
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "JBFqnCBsd6RMkjVDRZzb"
+    elevenlabs_tts_model: str = "eleven_flash_v2_5"  # lowest-latency ElevenLabs model
+    elevenlabs_stt_model: str = "scribe_v1"
 
     @property
     def psycopg_url(self) -> str:

@@ -46,13 +46,13 @@ const FEATURES = [
     icon: Network,
     title: "Specialist agents",
     body: "Every request goes to the right specialist — one that knows your business, one that manages your calendar.",
-    soon: true,
+    soon: false,
   },
   {
     icon: Mic,
     title: "Talks, not just types",
-    body: "Real-time voice: speech-to-text, the same agents, and natural text-to-speech replies.",
-    soon: true,
+    body: "Customers can simply talk. Your agent listens, answers out loud, and can even be interrupted mid-sentence.",
+    soon: false,
   },
 ];
 
@@ -110,7 +110,7 @@ export default function Landing() {
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted">
             VoxDesk gives your salon, clinic or restaurant an AI agent that answers customers from your
-            own documents and books their appointments — by chat today, by voice soon.
+            own documents and books their appointments — by chat or by voice.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/dashboard" size="lg">

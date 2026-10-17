@@ -5,7 +5,7 @@ import json
 from langchain_core.language_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk
 from langchain_core.outputs import ChatGenerationChunk
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_core.tools import tool
 
 from app.a2a.client import AgentEvent
@@ -26,7 +26,7 @@ class FakeToolLLM(GenericFakeChatModel):
     """Scripted chat model that also accepts bind_tools (the real one sends tool schemas)
     and streams tool calls — the base fake streams nothing for a tool-call-only message."""
 
-    def bind_tools(self, tools, **kwargs):
+    def bind_tools(self, tools, **kwargs) -> Runnable:
         return self
 
     def _stream(self, messages, stop=None, run_manager=None, **kwargs):

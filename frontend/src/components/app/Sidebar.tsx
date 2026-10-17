@@ -29,7 +29,7 @@ function workspaceNav(businessId: string): NavItem[] {
     { label: "Knowledge base", href: `${base}/knowledge`, icon: BookOpen },
     { label: "Services & hours", href: `${base}/services`, icon: Clock },
     { label: "Bookings", href: `${base}/bookings`, icon: CalendarDays },
-    { label: "Voice", icon: Mic, soon: true },
+    { label: "Voice", href: `${base}/voice`, icon: Mic },
     { label: "Analytics", icon: ChartColumn, soon: true },
   ];
 }

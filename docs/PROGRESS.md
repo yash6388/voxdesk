@@ -3,7 +3,19 @@
 > Update at the end of every work session: tick tasks, set "Next up", add decisions.
 
 ## Current status
-**Phase 3 — A2A ✅ done** · next: **agreed review checkpoint before Phase 4 (voice)**
+**Phase 4 — Voice ✅ done** · next: Phase 5 (production polish)
+
+### Phase 4 done
+- [x] Voice stack decided (option C): local faster-whisper + Kokoro by default, ElevenLabs via `STT_PROVIDER` / `TTS_PROVIDER` — no PyTorch (CTranslate2 + ONNX Runtime, int8)
+- [x] `scripts/download_voice_models.py` (Kokoro int8 ~92 MB + voices, Whisper base.en); models in gitignored `backend/data/models`
+- [x] `app/voice/`: `audio.py` (PyAV decode → 16 kHz mono; WAV encode), `text.py` (incremental sentence splitter, speakable text incl. ₹ → rupees, spoken yes/no), `providers.py` (Whisper/Kokoro/ElevenLabs behind STT/TTS protocols, background warm-up)
+- [x] `app/conversation.py`: transport-independent turn runner shared by chat (SSE) and voice (WebSocket)
+- [x] `/voice/{business_id}` WebSocket: STT → supervisor → per-sentence TTS pipeline; spoken + clicked confirmation; barge-in via task cancellation; timings (stt, first token, first audio, total)
+- [x] Frontend Voice page: hold-to-talk button (animated), live transcript, confirm card (or say yes/no), engines + latency panel, type-instead fallback; sidebar Voice enabled; landing copy updated
+- [x] 65 tests (17 new): text helpers, PyAV decode, ElevenLabs request shapes (MockTransport), WebSocket end-to-end incl. spoken booking confirmation
+- [x] Live: real Whisper transcribed speech sent over the WebSocket; real Kokoro spoke the reply (Gemini still 429)
+- [x] **LLM fallback:** every chat model is `Gemini.with_fallbacks([OpenAI-compatible model])` when `FALLBACK_API_KEY` (or `HF_TOKEN`/`HUGGINGFACE_API_KEY`) is set — provider chosen by `FALLBACK_BASE_URL` + `FALLBACK_MODEL` (Groq / OpenRouter / Hugging Face) (router, small talk, knowledge agent, booking agent tool calls); structured output forced to function-calling for HF providers; embeddings deliberately have no fallback. 5 tests (70 total). Live: Hugging Face token valid but account has **no inference credits (402)** → switch provider (e.g. Groq free tier) or buy credits
+- Measured on laptop CPU: Whisper ~0.7 s for a 5.5 s utterance; Kokoro ~2.6 s for 5.5 s of audio (RTF ~0.47)
 
 ### Phase 3 done
 - [x] `a2a-sdk` 1.2 (v1, protobuf types); prototyped streaming + input-required + resume first (found the "first artifact chunk must not append" rule)
@@ -49,9 +61,15 @@
 - [x] Lint + typecheck + build pass; verified live: events `meta → route → sources → token… → done`
 - [x] **SaaS redesign:** landing page; `/dashboard` app shell with sidebar (mobile drawer); businesses cards + create modal + empty state; knowledge base page (stats, drag-and-drop, status table); Playground with citation chips, suggestions, typing dots and **Agent Inspector** (route, rewritten query, sources, time-to-first-token); design system in `components/ui/` (brand gradient, light/dark tokens, Lucide icons)
 
-## Next up
-- [ ] **Review checkpoint (agreed):** walk through Phases 1–3 together, then decide the Phase 4 voice stack (cloud STT/TTS vs local models; disk space)
-- [ ] Live end-to-end check through the agents once Gemini quota resets (or with a paid key)
+## Next up — Phase 5 (production polish)
+- [ ] Live end-to-end check through the agents + voice once Gemini quota resets (or with a paid key)
+- [ ] Optional: add ELEVENLABS_API_KEY and try `TTS_PROVIDER=elevenlabs`
+- [x] Fallback provider: **Groq `openai/gpt-oss-120b`** — live-tested: plain answer 247 ms, tool calling 297 ms (correct args), structured output 596 ms. (`llama-3.3-70b-versatile` retired on Groq; `qwen/qwen3.8-27b` free tier capped at 1k output tokens/min)
+- [ ] Write `09_production.md` incl. the LLM fallback story (and show which model answered in the Inspector)
+- [ ] Tracing (Langfuse), evaluation suite (retrieval hit rate, routing/tool accuracy, latency)
+- [ ] Auth for the dashboard, rate limiting (Redis), input guardrails, cost tracking
+- [ ] Analytics page; human handoff
+- [ ] Dockerfiles + Compose for all services; deployment
 - [ ] Human handoff / escalation path (moved to Phase 5 dashboard work)
 - [ ] Dockerfiles + Compose services for API, agents and MCP (Phase 5)
 - [ ] Optional demo: connect MCP Inspector / Claude Desktop to the MCP server
@@ -65,11 +83,12 @@
 - MCP auth is a shared static key (production: OAuth 2.1 / per-client keys).
 - A2A task stores are in memory: an `input-required` task is lost if an agent restarts (fix: `DatabaseTaskStore`).
 - Booking agent only sees booking turns (its own memory).
+- Voice is push-to-talk (no VAD) and STT runs after the recording ends (no streaming partials); English only.
 
 ## Before Phase 4 (agreed checkpoint)
 - Review Phases 1–3 together: what was built and why.
 - Decide voice stack (local models vs cloud STT/TTS APIs) **before** installing anything heavy.
-  `/home` had only ~4.6 GB free on 2026-10-17; local models + PyTorch can need 2–4 GB.
+  `/home` had only ~4.6 GB free on 2026-10-17; cleaned caches on 2026-10-18 → ~27 GB free (no longer a blocker).
   Options: cloud APIs (no PyTorch), or run local models inside Docker (root partition has ~55 GB).
 
 ## Phase checklist
@@ -77,7 +96,7 @@
 - [x] Phase 1 — Text core + RAG
 - [x] Phase 2 — MCP
 - [x] Phase 3 — A2A
-- [ ] Phase 4 — Voice
+- [x] Phase 4 — Voice
 - [ ] Phase 5 — Production polish
 
 ## Decision log
@@ -118,4 +137,13 @@
 | 2026-10-18 | Relay agent output via LangGraph custom stream | Remote tokens/sources/tool calls reach the browser in real time |
 | 2026-10-18 | Agent Card public; JSON-RPC bearer-protected (A2A_API_KEY) | Discovery is public by design; invocation needs credentials |
 | 2026-10-18 | Separate liveness (`/health`) and readiness (`/health/services`) | Orchestrators restart on liveness, route traffic on readiness; one dead dependency shouldn't restart the API |
+| 2026-10-18 | Voice option C: local faster-whisper + Kokoro default, ElevenLabs switchable | Free/private/no quotas in dev; premium voice for demos; same interface |
+| 2026-10-18 | Kokoro int8 ONNX (~92 MB) over full model (310 MB) | Smaller + faster on CPU, near-identical quality |
+| 2026-10-18 | Decode audio with PyAV ourselves | faster-whisper 1.2.1 passes an argument PyAV 19 removed; PyAV 14 has no wheel |
+| 2026-10-18 | WebSocket for voice; shared `conversation.run_events` for chat + voice | Bidirectional audio + control; one source of truth for turn logic |
+| 2026-10-18 | Per-sentence TTS pipelined with LLM streaming; warm-up at startup | Minimises time to first audio |
+| 2026-10-18 | Spoken confirmation: any "no" wins, ambiguity re-prompts | A wrong "yes" books a real appointment |
+| 2026-10-18 | LLM fallback to any OpenAI-compatible provider (default Hugging Face router; Groq/OpenRouter by config) | Free-tier Gemini 429s; provider redundancy is a standard resilience pattern |
+| 2026-10-18 | Fallback model = Groq `openai/gpt-oss-120b` | Free tier, ~250–600 ms incl. tool calls + structured output; chosen by live comparison against the account's model list |
+| 2026-10-18 | No embedding fallback | Different embedding models produce incomparable vector spaces; would require re-embedding all chunks |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |
