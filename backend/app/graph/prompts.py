@@ -35,6 +35,11 @@ Rules:
 - Never mention tools, ids or the system. Keep replies short and natural (they may be spoken),
   no markdown."""
 
+KNOWLEDGE_UNAVAILABLE = (
+    "Sorry, I can't look that up right now. Please try again in a moment, "
+    "or I can pass your question to our staff."
+)
+
 BOOKING_UNAVAILABLE = (
     "Sorry, I can't reach our booking system right now. "
     "Please try again in a moment, or I can pass your request to our staff."

@@ -7,27 +7,28 @@ import {
   Gauge,
   LoaderCircle,
   MessageSquare,
+  Network,
   Plug,
   Search,
 } from "lucide-react";
 
 import type { ToolStep, UIMessage } from "@/components/chat/types";
 import { Badge } from "@/components/ui/primitives";
-import type { Route } from "@/lib/api";
+import type { Delegation, Route } from "@/lib/api";
 import { formatMs } from "@/lib/utils";
 
 const INTENTS: Record<Route["intent"], { label: string; icon: React.ElementType; note: string }> = {
   knowledge: {
     label: "Knowledge",
     icon: BookOpen,
-    note: "Routed to retrieval → grounded answer",
+    note: "Delegated to the Knowledge agent → hybrid search → grounded answer",
   },
   booking: {
     label: "Booking",
     icon: CalendarDays,
-    note: "Routed to the booking agent → MCP tools",
+    note: "Delegated to the Booking agent → MCP tools",
   },
-  smalltalk: { label: "Small talk", icon: MessageSquare, note: "Answered directly, no retrieval" },
+  smalltalk: { label: "Small talk", icon: MessageSquare, note: "Answered by the supervisor itself" },
 };
 
 /** Shows how the agent handled one turn: routing decision, rewritten query, sources, latency. */
@@ -53,6 +54,12 @@ export function Inspector({ message }: { message: UIMessage | null }) {
               </p>
             )}
           </Section>
+
+          {message.delegation && (
+            <Section title="Agent · A2A">
+              <DelegationInfo delegation={message.delegation} />
+            </Section>
+          )}
 
           {message.timing && (
             <Section title="Latency">
@@ -106,6 +113,35 @@ export function Inspector({ message }: { message: UIMessage | null }) {
             </Section>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+const AGENT_NAMES: Record<Delegation["agent"], string> = {
+  knowledge: "Knowledge agent",
+  booking: "Booking agent",
+};
+
+const STATE_TONES: Record<Delegation["state"], "brand" | "success" | "warning" | "danger"> = {
+  working: "brand",
+  completed: "success",
+  "input-required": "warning",
+  failed: "danger",
+};
+
+function DelegationInfo({ delegation: d }: { delegation: Delegation }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          <Network className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+          {AGENT_NAMES[d.agent] ?? d.agent}
+        </span>
+        <Badge tone={STATE_TONES[d.state] ?? "neutral"}>{d.state}</Badge>
+      </div>
+      {d.task_id && (
+        <div className="mt-2 truncate font-mono text-[11px] text-muted">task {d.task_id}</div>
       )}
     </div>
   );

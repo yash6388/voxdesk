@@ -3,58 +3,36 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg.rows import dict_row
-from psycopg_pool import AsyncConnectionPool
 
+from app.a2a.client import A2AAgent
 from app.api import booking, businesses, chat, documents, health
 from app.config import get_settings
-from app.db.session import SessionLocal, engine
-from app.graph.builder import build_graph
-from app.graph.tools import MCPToolProvider
-from app.rag.embeddings import get_embedder
+from app.db.session import engine
+from app.graph.checkpoint import postgres_checkpointer
+from app.graph.supervisor import build_supervisor
+from app.llm import chat_llm, router_llm
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: open the checkpointer's connection pool and compile the graph once.
-    Shutdown: close pools cleanly."""
+    """Startup: open the checkpointer pool, connect to the A2A agents, compile the
+    supervisor graph once. Shutdown: close everything cleanly."""
     settings = get_settings()
-    async with AsyncConnectionPool(
-        settings.psycopg_url,
-        max_size=10,
-        # Settings required by LangGraph's Postgres checkpointer.
-        kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
-        open=False,
-    ) as pool:
-        checkpointer = AsyncPostgresSaver(pool)
-        await checkpointer.setup()  # creates checkpoint tables if missing
-
-        app.state.graph = build_graph(
-            chat_llm=ChatGoogleGenerativeAI(
-                model=settings.chat_model,
-                google_api_key=settings.google_api_key,
-                temperature=0.3,
-                thinking_budget=0,  # no "thinking" pass: lower latency for chat/voice
-                # Fail fast: a customer shouldn't wait ~35 s of silent backoff on a 429.
-                max_retries=2,
-            ),
-            router_llm=ChatGoogleGenerativeAI(
-                model=settings.router_model,
-                google_api_key=settings.google_api_key,
-                temperature=0,
-                thinking_budget=0,
-                max_retries=2,
-            ),
-            embedder=get_embedder(),
-            session_factory=SessionLocal,
-            tool_provider=MCPToolProvider(settings.mcp_url, settings.mcp_api_key),
+    knowledge = A2AAgent("knowledge", settings.knowledge_agent_url, settings.a2a_api_key)
+    booking_agent = A2AAgent("booking", settings.booking_agent_url, settings.a2a_api_key)
+    async with postgres_checkpointer() as checkpointer:
+        app.state.graph = build_supervisor(
+            router_llm=router_llm(),
+            chat_llm=chat_llm(),
+            knowledge_agent=knowledge,
+            booking_agent=booking_agent,
             checkpointer=checkpointer,
         )
         yield
+    await knowledge.aclose()
+    await booking_agent.aclose()
     await engine.dispose()
 
 

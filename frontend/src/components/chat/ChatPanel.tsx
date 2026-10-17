@@ -107,6 +107,9 @@ export function ChatPanel({
           case "sources":
             patch((m) => ({ ...m, sources: ev.data }));
             break;
+          case "delegation":
+            patch((m) => ({ ...m, delegation: ev.data }));
+            break;
           case "tool_call":
             patch((m) => ({ ...m, tools: [...(m.tools ?? []), { ...ev.data }] }));
             break;

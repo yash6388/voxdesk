@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "VoxDesk API — FastAPI gateway and LangGraph agents"
 requires-python = ">=3.13"
 dependencies = [
+    "a2a-sdk[http-server]>=1.2.2",
     "alembic>=1.20.0",
     "asyncpg>=0.32.0",
     "fastapi>=0.143.3",

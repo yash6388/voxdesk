@@ -6,6 +6,11 @@
 > using MCP tools, with a `confirm` node that pauses via `interrupt()` for write actions). The router
 > and respond nodes now read a *conversation view* (customer + assistant text only, no tool
 > messages). See [`06_mcp.md`](06_mcp.md) for the full booking flow.
+>
+> **Phase 3 update:** the graph is now split — the API runs a **supervisor** (`graph/supervisor.py`:
+> route → delegate over A2A or answer small talk) and the RAG/booking work happens in separate agent
+> services. Routing, query rewriting, memory and SSE streaming described here still apply to the
+> supervisor. See [`07_a2a.md`](07_a2a.md).
 
 ---
 

@@ -12,21 +12,19 @@ The tenant comes from the connection, never from tool arguments, so the LLM
 cannot be talked into touching another business's bookings.
 """
 
-import hmac
 import uuid
 from datetime import date, datetime
 
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 from app.booking import service as booking
 from app.booking.service import WEEKDAYS, BookingError
 from app.config import get_settings
 from app.db.models import Booking, Business, Service
 from app.db.session import SessionLocal
+from app.security import BearerKeyMiddleware
 
 settings = get_settings()
 
@@ -249,19 +247,9 @@ async def reschedule_booking(
 # ---------- HTTP app ----------
 
 
-class ApiKeyMiddleware(BaseHTTPMiddleware):
-    """Reject requests without the shared bearer token (constant-time comparison)."""
-
-    async def dispatch(self, request, call_next):
-        token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
-        if not hmac.compare_digest(token, settings.mcp_api_key):
-            return JSONResponse({"error": "unauthorized"}, status_code=401)
-        return await call_next(request)
-
-
 def create_app():
     app = mcp.streamable_http_app()
-    app.add_middleware(ApiKeyMiddleware)
+    app.add_middleware(BearerKeyMiddleware, key=settings.mcp_api_key)
     return app
 
 

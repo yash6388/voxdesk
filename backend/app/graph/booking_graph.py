@@ -1,57 +1,42 @@
+"""The booking agent's graph: an LLM with MCP booking tools, plus a human-in-the-loop
+confirmation step before anything that changes data. Runs inside the booking A2A service.
+
+    START → booking_agent ─┬─ no tool calls ──────────────→ END
+                 ▲         ├─ read tools ───→ tools ─┐
+                 │         └─ write tools → confirm ─┤  (⏸ interrupt: ask the customer)
+                 └───────────────────────────────────┘
+"""
+
 import logging
 import re
 import uuid
-from dataclasses import asdict
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, AnyMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.types import Command, interrupt
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from app.db.models import Booking, Service
-from app.graph.prompts import (
-    BOOKING_PROMPT,
-    BOOKING_UNAVAILABLE,
-    DECLINED,
-    RESPOND_PROMPT,
-    ROUTER_PROMPT,
-)
-from app.graph.state import ChatState, Route
+from app.graph.common import recent_turns
+from app.graph.prompts import BOOKING_PROMPT, BOOKING_UNAVAILABLE, DECLINED
 from app.graph.tools import WRITE_TOOLS, ToolProvider
-from app.rag.embeddings import Embedder
-from app.rag.retrieval import hybrid_search
 
 logger = logging.getLogger(__name__)
 
-# How many past messages the LLM sees. Older ones stay in the checkpoint but
-# aren't sent, which bounds latency and token cost on long conversations.
-HISTORY_WINDOW = 10
 # The booking agent sees recent turns in full (with tool results) so it can reuse
 # service ids and times it already looked up instead of guessing them.
 BOOKING_TURNS = 3
 
 
-def conversation_view(messages: list[AnyMessage]) -> list[AnyMessage]:
-    """Only what was actually said: customer messages and assistant replies with text.
-    Tool calls/results are internal; dropping them also avoids sending the LLM a tool
-    result whose matching call was cut off by the history window."""
-    return [
-        m
-        for m in messages
-        if m.type == "human" or (m.type == "ai" and m.text and not getattr(m, "tool_calls", None))
-    ]
-
-
-def recent_turns(messages: list[AnyMessage], turns: int) -> list[AnyMessage]:
-    """The last `turns` turns in full, including tool calls and their results.
-    Cutting at a customer message keeps every tool call paired with its result."""
-    starts = [i for i, m in enumerate(messages) if m.type == "human"]
-    return messages[starts[-turns] :] if len(starts) >= turns else messages
+class BookingState(MessagesState):
+    business_id: str
+    business_name: str
+    business_timezone: str
 
 
 def ungrounded_customer_details(args: dict, customer_text: str) -> list[str]:
@@ -69,61 +54,14 @@ def ungrounded_customer_details(args: dict, customer_text: str) -> list[str]:
     return missing
 
 
-def build_graph(
+def build_booking_graph(
     *,
     chat_llm: BaseChatModel,
-    router_llm: BaseChatModel,
-    embedder: Embedder,
-    session_factory: async_sessionmaker,
     tool_provider: ToolProvider,
+    session_factory: async_sessionmaker,
     checkpointer: BaseCheckpointSaver | None = None,
 ):
-    """
-    START → route ─┬─ knowledge → retrieve → respond → END
-                   ├─ smalltalk ───────────→ respond → END
-                   └─ booking → booking_agent ─┬─ no tool calls ──────────────→ END
-                                    ▲          ├─ read tools ───→ tools ─┐
-                                    │          └─ write tools → confirm ─┤ (⏸ asks customer)
-                                    └────────────────────────────────────┘
-    """
-    structured_router = router_llm.with_structured_output(Route)
-
-    async def route(state: ChatState) -> dict:
-        system = SystemMessage(ROUTER_PROMPT.format(business_name=state["business_name"]))
-        decision: Route = await structured_router.ainvoke(
-            [system, *conversation_view(state["messages"])[-HISTORY_WINDOW:]]
-        )
-        # Reset per-turn fields so last turn's context doesn't leak into this one.
-        return {"intent": decision.intent, "search_query": decision.search_query, "context": []}
-
-    async def retrieve(state: ChatState) -> dict:
-        query = state["search_query"] or state["messages"][-1].text
-        async with session_factory() as session:
-            chunks = await hybrid_search(session, embedder, uuid.UUID(state["business_id"]), query)
-        return {"context": [asdict(c) for c in chunks]}
-
-    async def respond(state: ChatState) -> dict:
-        context = (
-            "\n\n".join(
-                f"[{i}] (from {c['filename']})\n{c['content']}"
-                for i, c in enumerate(state["context"], start=1)
-            )
-            or "(no context retrieved)"
-        )
-        system = SystemMessage(
-            RESPOND_PROMPT.format(
-                business_name=state["business_name"],
-                business_description=state["business_description"],
-                context=context,
-            )
-        )
-        history = conversation_view(state["messages"])[-HISTORY_WINDOW:]
-        reply = await chat_llm.ainvoke([system, *history])
-        return {"messages": [reply]}
-
-    # ---------- Booking agent (tools come from the MCP server) ----------
-
-    async def booking_agent(state: ChatState) -> dict:
+    async def booking_agent(state: BookingState) -> dict:
         try:
             tools = await tool_provider.get_tools(state["business_id"])
         except Exception:
@@ -143,7 +81,7 @@ def build_graph(
         )
         return {"messages": [reply]}
 
-    def after_booking_agent(state: ChatState) -> str:
+    def after_booking_agent(state: BookingState) -> str:
         calls = getattr(state["messages"][-1], "tool_calls", None) or []
         if not calls:
             return END
@@ -201,7 +139,7 @@ def build_graph(
                 },
             }
 
-    async def confirm(state: ChatState) -> Command:
+    async def confirm(state: BookingState) -> Command:
         """Human-in-the-loop: pause the graph until the customer approves the action.
         interrupt() saves state to the checkpoint and ends this run; the graph resumes
         here — possibly in a different HTTP request — with the customer's decision."""
@@ -237,7 +175,7 @@ def build_graph(
         ]
         return Command(goto="booking_agent", update={"messages": declined})
 
-    async def tools(state: ChatState) -> dict:
+    async def tools(state: BookingState) -> dict:
         calls = state["messages"][-1].tool_calls
         try:
             available = {t.name: t for t in await tool_provider.get_tools(state["business_id"])}
@@ -262,21 +200,12 @@ def build_graph(
             results.append(await tool.ainvoke({**call, "type": "tool_call"}))
         return {"messages": results}
 
-    def after_route(state: ChatState) -> str:
-        return {"knowledge": "retrieve", "booking": "booking_agent"}.get(state["intent"], "respond")
-
-    graph = StateGraph(ChatState)
-    graph.add_node("route", route)
-    graph.add_node("retrieve", retrieve)
-    graph.add_node("respond", respond)
+    graph = StateGraph(BookingState)
     graph.add_node("booking_agent", booking_agent)
     graph.add_node("confirm", confirm, destinations=("tools", "booking_agent"))
     graph.add_node("tools", tools)
 
-    graph.add_edge(START, "route")
-    graph.add_conditional_edges("route", after_route, ["retrieve", "respond", "booking_agent"])
-    graph.add_edge("retrieve", "respond")
-    graph.add_edge("respond", END)
+    graph.add_edge(START, "booking_agent")
     graph.add_conditional_edges("booking_agent", after_booking_agent, ["confirm", "tools", END])
     graph.add_edge("tools", "booking_agent")
 

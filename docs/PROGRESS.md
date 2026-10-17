@@ -3,7 +3,20 @@
 > Update at the end of every work session: tick tasks, set "Next up", add decisions.
 
 ## Current status
-**Phase 2 — MCP booking ✅ done** · next: Phase 3 (A2A)
+**Phase 3 — A2A ✅ done** · next: **agreed review checkpoint before Phase 4 (voice)**
+
+### Phase 3 done
+- [x] `a2a-sdk` 1.2 (v1, protobuf types); prototyped streaming + input-required + resume first (found the "first artifact chunk must not append" rule)
+- [x] `app/a2a/server.py` (Agent Card builder, app factory with bearer auth, `TextStream`, `emit_data`) and `app/a2a/client.py` (`A2AAgent`: card discovery, streaming → simple events)
+- [x] **Knowledge agent** (`app/agents/knowledge.py`, :8101): hybrid RAG, streamed answer artifact + sources artifact
+- [x] **Booking agent** (`app/agents/booking.py`, :8102): booking graph moved in (`graph/booking_graph.py`), own Postgres memory, graph interrupt → A2A `input-required`, resume on same task
+- [x] **Supervisor** (`graph/supervisor.py`): route → delegate (knowledge/booking) or local small talk; relays agent stream via LangGraph custom stream; `booking_confirm` interrupt ↔ A2A input-required; fallbacks when agents fail
+- [x] Shared modules: `llm.py`, `security.py` (BearerKeyMiddleware, also used by MCP), `errors.py`, `graph/common.py`, `graph/checkpoint.py`; `builder.py` removed
+- [x] Chat API: `custom` stream mode, new `delegation` SSE event; UI/API contract otherwise unchanged
+- [x] Frontend: Agent Inspector shows the handling A2A agent, task id and state
+- [x] `scripts/dev_services.sh` runs MCP + both agents with labelled logs
+- [x] 47 tests: real A2A protocol in-process (card, 401, streaming, input-required → resume), supervisor delegation/HITL/fallbacks, booking graph
+- [x] Live: Agent Cards served publicly, JSON-RPC without key → 401; full Gemini conversation blocked by free-tier 429 (graceful message shown end to end)
 
 ### Phase 2 done
 - [x] Models + migration: `services`, `business_hours`, `bookings` (+ `businesses.timezone/currency`); **exclusion constraint** (btree_gist) prevents overlapping confirmed bookings
@@ -35,12 +48,11 @@
 - [x] Lint + typecheck + build pass; verified live: events `meta → route → sources → token… → done`
 - [x] **SaaS redesign:** landing page; `/dashboard` app shell with sidebar (mobile drawer); businesses cards + create modal + empty state; knowledge base page (stats, drag-and-drop, status table); Playground with citation chips, suggestions, typing dots and **Agent Inspector** (route, rewritten query, sources, time-to-first-token); design system in `components/ui/` (brand gradient, light/dark tokens, Lucide icons)
 
-## Next up — Phase 3 (A2A)
-- [ ] Re-run the final live check ("what bookings do I have?") once Gemini quota resets — blocked by free-tier 429 on 2026-10-17
-- [ ] Knowledge agent and booking agent as separate A2A services (Agent Cards, `a2a-sdk`)
-- [ ] Supervisor becomes an A2A client (discover + delegate + stream); booking agent keeps using MCP
-- [ ] Human handoff / escalation path
-- [ ] Docker Compose entries for the agent services; interview note `07_a2a.md`
+## Next up
+- [ ] **Review checkpoint (agreed):** walk through Phases 1–3 together, then decide the Phase 4 voice stack (cloud STT/TTS vs local models; disk space)
+- [ ] Live end-to-end check through the agents once Gemini quota resets (or with a paid key)
+- [ ] Human handoff / escalation path (moved to Phase 5 dashboard work)
+- [ ] Dockerfiles + Compose services for API, agents and MCP (Phase 5)
 - [ ] Optional demo: connect MCP Inspector / Claude Desktop to the MCP server
 
 ## Known limitations / ideas
@@ -50,6 +62,8 @@
 - **Gemini free tier = 20 requests/day per model** for this project; a booking conversation uses several calls. Use a paid key or wait for reset; consider model fallbacks.
 - One booking at a time per business (no staff/resources yet); phone number is a lightweight ownership check (no OTP).
 - MCP auth is a shared static key (production: OAuth 2.1 / per-client keys).
+- A2A task stores are in memory: an `input-required` task is lost if an agent restarts (fix: `DatabaseTaskStore`).
+- Booking agent only sees booking turns (its own memory).
 
 ## Before Phase 4 (agreed checkpoint)
 - Review Phases 1–3 together: what was built and why.
@@ -61,7 +75,7 @@
 - [x] Phase 0 — Setup
 - [x] Phase 1 — Text core + RAG
 - [x] Phase 2 — MCP
-- [ ] Phase 3 — A2A
+- [x] Phase 3 — A2A
 - [ ] Phase 4 — Voice
 - [ ] Phase 5 — Production polish
 
@@ -95,4 +109,11 @@
 | 2026-10-17 | Booking agent context = last 3 full turns (with tool messages) | Dropping tool results made the agent invent service ids (found in live test) |
 | 2026-10-17 | Separate `date` and `time` tool args | LLMs fill these more reliably than tz-aware ISO datetimes |
 | 2026-10-17 | `max_retries=2` + friendly 429 message | SDK backoff made users wait ~35 s before a generic error |
+| 2026-10-18 | Agents live in `backend/app/agents` (separate processes, shared package) | Reuse RAG/booking code + models; still independently runnable on :8101/:8102 |
+| 2026-10-18 | Prototype the A2A SDK before building | v1 SDK differs from tutorials; found artifact-append rule + metadata-not-persisted |
+| 2026-10-18 | Supervisor keeps conversation, routing, small talk, confirmation UI | Agents stay focused; small talk avoids a network hop; UI contract unchanged |
+| 2026-10-18 | Knowledge agent receives the router's standalone query | Agent can be stateless |
+| 2026-10-18 | HITL = booking agent `input-required` + supervisor `interrupt()`, reply on same task | Native A2A lifecycle; survives across HTTP requests on both sides |
+| 2026-10-18 | Relay agent output via LangGraph custom stream | Remote tokens/sources/tool calls reach the browser in real time |
+| 2026-10-18 | Agent Card public; JSON-RPC bearer-protected (A2A_API_KEY) | Discovery is public by design; invocation needs credentials |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

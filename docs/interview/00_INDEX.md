@@ -24,7 +24,7 @@ Each file is written right after the phase it covers, while the details are fres
 | 04 | [04_testing.md](04_testing.md) | Testing strategy: fakes for LLMs/embeddings, real Postgres, CI | ✅ Phase 1 |
 | 05 | [05_frontend.md](05_frontend.md) | Next.js app, typed API client, reading SSE streams, history restore, upload polling, CORS | ✅ Phase 1 |
 | 06 | [06_mcp.md](06_mcp.md) | MCP server + client, tool design, tenant security, exclusion constraint, booking agent, human-in-the-loop, guardrails, live-test bugs | ✅ Phase 2 |
-| 07 | `07_a2a.md` | A2A protocol, Agent Cards, MCP vs A2A | ⏳ Phase 3 |
+| 07 | [07_a2a.md](07_a2a.md) | A2A protocol, Agent Cards, tasks/artifacts, MCP vs A2A, why split services, supervisor delegation, HITL over A2A, testing the protocol | ✅ Phase 3 |
 | 08 | `08_voice.md` | STT → agent → TTS pipeline, latency, barge-in | ⏳ Phase 4 |
 | 09 | `09_production.md` | Tracing, evals, auth, rate limiting, deployment | ⏳ Phase 5 |
 
@@ -58,5 +58,10 @@ Each file is written right after the phase it covers, while the details are fres
 | **interrupt()** | LangGraph function that checkpoints the graph and pauses it until resumed |
 | **Exclusion constraint** | Postgres rule that no two rows may "conflict" (here: overlapping time ranges) |
 | **Guardrail** | A code check that stops or corrects unsafe/invalid LLM output |
+| **A2A** | Agent2Agent protocol — agents discover each other (Agent Cards) and delegate tasks over HTTP |
+| **Agent Card** | Public JSON describing an agent's skills, endpoint, capabilities and auth |
+| **Task (A2A)** | A unit of delegated work with a lifecycle (working, completed, input-required, failed…) |
+| **Artifact (A2A)** | An output of a task, e.g. a streamed answer or a list of sources |
+| **Supervisor** | The orchestrating agent that routes and delegates to specialist agents |
 | **Migration** | A versioned script that changes the database schema (Alembic) |
 | **CI** | Continuous Integration — automatic lint + tests on every push (GitHub Actions) |

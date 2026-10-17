@@ -55,6 +55,12 @@ export type Source = { filename: string; chunk_index: number; content: string; s
 export type Route = { intent: "knowledge" | "booking" | "smalltalk"; search_query: string };
 
 export type ToolCall = { name: string; args: Record<string, unknown> };
+/** Which specialist agent handled the turn over A2A, and the remote task's state. */
+export type Delegation = {
+  agent: "knowledge" | "booking";
+  task_id: string;
+  state: "working" | "completed" | "input-required" | "failed";
+};
 export type ToolResult = { name: string; status: "success" | "error"; content: string };
 
 /** An action the agent wants to take that needs the customer's approval. */
@@ -65,6 +71,7 @@ export type ChatEvent =
   | { event: "meta"; data: { thread_id: string } }
   | { event: "route"; data: Route }
   | { event: "sources"; data: Source[] }
+  | { event: "delegation"; data: Delegation }
   | { event: "tool_call"; data: ToolCall }
   | { event: "tool_result"; data: ToolResult }
   | { event: "confirm"; data: Confirmation }

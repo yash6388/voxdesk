@@ -15,7 +15,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams (system overview
 | Frontend | Next.js, TypeScript, Tailwind CSS |
 | Backend | FastAPI, Python 3.13, uv |
 | Agents | LangGraph, LangChain, Gemini |
-| Protocols | MCP (FastMCP), A2A |
+| Protocols | MCP (FastMCP), A2A (a2a-sdk) |
 | Data | PostgreSQL + pgvector, Redis |
 | Voice | Speech-to-text + text-to-speech streaming pipeline |
 
@@ -24,7 +24,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams (system overview
 ```
 voxdesk/
 ├── frontend/            Next.js app (chat, voice UI, dashboard)
-├── backend/             FastAPI API, LangGraph agents, MCP booking server (app/mcp)
+├── backend/             FastAPI API + supervisor, A2A agents (app/agents), MCP server (app/mcp)
 ├── docs/                Plan, progress, design notes
 ├── samples/             Example business documents for demos and tests
 └── docker-compose.yml   Postgres (pgvector) + Redis
@@ -49,9 +49,10 @@ uv run alembic upgrade head       # create/upgrade database tables
 uv run python -m scripts.seed_demo   # optional: demo salon with services, hours and a document
 uv run uvicorn app.main:app --reload
 
-# 3b. MCP booking server → http://localhost:8001/mcp (separate terminal)
+# 3b. Supporting services (separate terminal): MCP server :8001,
+#     Knowledge agent :8101, Booking agent :8102 — Ctrl+C stops all
 cd backend
-uv run python -m app.mcp.server
+./scripts/dev_services.sh
 
 # 4. Frontend → http://localhost:3000
 cd frontend

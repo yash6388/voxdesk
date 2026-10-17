@@ -3,8 +3,8 @@
 > Living document — updated after every phase. Diagrams are [Mermaid](https://mermaid.js.org/):
 > GitHub renders them automatically, and draw.io can import them (see the last section).
 >
-> **Status:** Phase 2 built (text chat + RAG + MCP booking with human-in-the-loop).
-> Components from later phases are marked *planned*.
+> **Status:** Phase 3 built — supervisor + two A2A specialist agents, RAG, MCP booking with
+> human-in-the-loop. Components from later phases are marked *planned*.
 
 ---
 
@@ -21,15 +21,15 @@ flowchart LR
         ui["Landing · Dashboard<br/>Playground · Knowledge<br/>Services · Bookings"]
     end
 
-    subgraph BE["Backend · FastAPI"]
+    subgraph BE["API · FastAPI"]
         api["REST + SSE API"]
         voice["Voice pipeline<br/>STT / TTS"]
-        sup["LangGraph supervisor<br/>route · retrieve · respond<br/>booking agent · confirm"]
+        sup["Supervisor graph<br/>route · small talk<br/>memory · confirm ⏸"]
     end
 
-    subgraph AG["Specialist agents · A2A"]
-        ka["Knowledge agent"]
-        ba["Booking agent"]
+    subgraph AG["Specialist agents · A2A services"]
+        ka["Knowledge agent :8101<br/>hybrid RAG"]
+        ba["Booking agent :8102<br/>booking graph · own memory"]
     end
 
     mcp["VoxDesk MCP server :8001<br/>7 booking tools"]
@@ -47,43 +47,49 @@ flowchart LR
     ui -. "WebSocket audio" .-> voice
     voice -.-> sup
     api --> sup
+    sup -- "A2A · JSON-RPC + SSE" --> ka
+    sup -- "A2A · JSON-RPC + SSE" --> ba
+    ba -- "MCP · Streamable HTTP" --> mcp
     sup --> pg
-    sup --> gemini
-    sup -- "MCP · Streamable HTTP" --> mcp
+    ka --> pg
+    ba --> pg
     mcp --> pg
-    sup -. "A2A" .-> ka
-    sup -. "A2A" .-> ba
+    sup --> gemini
+    ka --> gemini
+    ba --> gemini
     api -.-> redis
 
     classDef planned stroke-dasharray: 5 5
-    class voice,ka,ba,redis planned
+    class voice,redis planned
 ```
 
 | Component | Responsibility | Tech | Status |
 |---|---|---|---|
-| Frontend | Landing page; dashboard: businesses, knowledge base, services & hours, bookings, playground with agent inspector + confirmation card | Next.js, TypeScript, Tailwind, Lucide | ✅ Phase 1–2 |
+| Frontend | Landing page; dashboard: businesses, knowledge base, services & hours, bookings, playground with agent inspector (A2A agent, MCP tools) + confirmation card | Next.js, TypeScript, Tailwind, Lucide | ✅ Phase 1–3 |
 | API | REST (businesses, documents, services, hours, bookings), SSE chat + resume | FastAPI, Pydantic | ✅ Phase 1–2 |
-| Supervisor graph | Routes intent, rewrites queries, RAG, booking agent loop, human-in-the-loop, memory | LangGraph, Gemini | ✅ Phase 1–2 (agents split out via A2A in Phase 3) |
-| RAG | Ingestion + hybrid retrieval | pgvector, Postgres full-text, Gemini embeddings | ✅ Phase 1 |
+| Supervisor graph | Routing + query rewrite, small talk, conversation memory, delegation over A2A, confirmation pause | LangGraph, Gemini, a2a-sdk client | ✅ Phase 3 |
+| Knowledge agent | A2A service: hybrid retrieval + grounded, streamed answer with sources | a2a-sdk, pgvector, Gemini | ✅ Phase 3 |
+| Booking agent | A2A service: booking graph (LLM + MCP tools + guardrails), own memory, `input-required` for confirmation | a2a-sdk, LangGraph, langchain-mcp-adapters | ✅ Phase 3 |
 | MCP server | Booking tools usable by any MCP client; auth + tenant headers | FastMCP (`mcp` SDK), Streamable HTTP | ✅ Phase 2 |
 | Booking domain | Availability, validation, booking rules shared by MCP + REST | SQLAlchemy, Postgres exclusion constraint | ✅ Phase 2 |
-| A2A agents | Independent knowledge + booking services | a2a-sdk | ⏳ Phase 3 |
 | Voice | Speech in → agent → speech out | WebSocket, STT/TTS (TBD) | ⏳ Phase 4 |
-| PostgreSQL | System of record + vectors + agent checkpoints | Postgres 16 + pgvector + btree_gist | ✅ |
+| PostgreSQL | System of record + vectors + checkpoints (supervisor and booking agent) | Postgres 16 + pgvector + btree_gist | ✅ |
 | Redis | Cache, rate limiting, pub/sub | Redis 7 | Running, used from Phase 5 |
 
 ---
 
-## 2. Current deployment (Phase 2, local)
+## 2. Current deployment (Phase 3, local)
 
 ```mermaid
 flowchart TB
     browser(["Browser"])
-    inspector(["Any MCP client<br/>MCP Inspector · Claude Desktop"])
+    other(["Any A2A / MCP client"])
     subgraph host["Developer machine"]
-        next["Next.js dev server<br/>:3000"]
-        fastapi["FastAPI · uvicorn<br/>:8000"]
-        mcpserver["VoxDesk MCP server<br/>uvicorn :8001"]
+        next["Next.js dev server :3000"]
+        fastapi["API + supervisor · uvicorn :8000"]
+        knowledge["Knowledge agent · :8101"]
+        bookingagent["Booking agent · :8102"]
+        mcpserver["MCP server · :8001"]
         subgraph docker["Docker Compose"]
             pg[("pgvector/pgvector:pg16<br/>host :5433")]
             redis[("redis:7-alpine<br/>host :6380")]
@@ -93,15 +99,22 @@ flowchart TB
 
     browser --> next
     browser -- "fetch / SSE · CORS" --> fastapi
-    fastapi -- "MCP · Bearer key + X-Business-Id" --> mcpserver
-    inspector -. "MCP" .-> mcpserver
-    fastapi -- "asyncpg: app data<br/>psycopg: checkpoints" --> pg
-    mcpserver -- "asyncpg" --> pg
-    fastapi -- "HTTPS" --> gemini
+    fastapi -- "A2A · Bearer A2A key" --> knowledge
+    fastapi -- "A2A · Bearer A2A key" --> bookingagent
+    bookingagent -- "MCP · Bearer MCP key + X-Business-Id" --> mcpserver
+    other -. "Agent Card / MCP" .-> knowledge
+    other -.-> mcpserver
+    fastapi --> pg
+    knowledge --> pg
+    bookingagent --> pg
+    mcpserver --> pg
+    fastapi --> gemini
+    knowledge --> gemini
+    bookingagent --> gemini
 ```
 
-Processes to run locally: `docker compose up -d`, the API (`uvicorn app.main:app`), the MCP server
-(`python -m app.mcp.server`) and the frontend (`npm run dev`).
+Run locally: `docker compose up -d`, `./scripts/dev_services.sh` (MCP + both agents), the API
+(`uvicorn app.main:app --reload`) and the frontend (`npm run dev`).
 
 ---
 
@@ -109,70 +122,77 @@ Processes to run locally: `docker compose up -d`, the API (`uvicorn app.main:app
 
 ```mermaid
 flowchart TB
-    subgraph api["app/api"]
-        bus["businesses.py<br/>CRUD + /search"]
-        docs["documents.py<br/>upload · list · delete"]
-        bk["booking.py<br/>services · hours · bookings"]
-        chat["chat.py<br/>SSE stream · resume · history"]
+    subgraph apiproc["API process"]
+        chat["api/chat.py<br/>SSE · resume · history"]
+        rest["api/businesses · documents · booking"]
+        sup["graph/supervisor.py"]
+        client["a2a/client.py<br/>A2AAgent"]
     end
-    subgraph graph["app/graph"]
-        builder["builder.py<br/>route · retrieve · respond<br/>booking_agent · confirm · tools"]
-        tools["tools.py<br/>MCPToolProvider"]
+    subgraph kproc["Knowledge agent process"]
+        kexec["agents/knowledge.py<br/>executor + Agent Card"]
+        ret["rag/retrieval.py<br/>hybrid + RRF"]
     end
-    subgraph mcp["app/mcp (separate process)"]
-        server["server.py<br/>FastMCP · 7 tools · auth middleware"]
+    subgraph bproc["Booking agent process"]
+        bexec["agents/booking.py<br/>executor + Agent Card"]
+        bgraph["graph/booking_graph.py<br/>agent · tools · confirm"]
+        tools["graph/tools.py<br/>MCPToolProvider"]
     end
-    subgraph domain["app/booking"]
-        svc["service.py<br/>availability · rules · writes"]
+    subgraph mproc["MCP server process"]
+        mcp["mcp/server.py<br/>7 tools"]
     end
-    subgraph rag["app/rag"]
-        ing["ingestion.py"]
-        ret["retrieval.py<br/>hybrid + RRF"]
-        emb["embeddings.py"]
-    end
-    db[("app/db<br/>models · session")]
-    ckpt["AsyncPostgresSaver"]
+    svc["booking/service.py<br/>rules (shared)"]
+    shared["a2a/server.py · llm.py · security.py<br/>graph/checkpoint.py · db/"]
 
-    chat --> builder
-    builder --> ret
-    builder --> tools
-    tools -- "MCP over HTTP" --> server
-    server --> svc
-    bk --> svc
-    builder --> ckpt
-    docs --> ing
-    ing --> emb
-    ret --> emb
-    svc --> db
-    ing --> db
-    ret --> db
+    chat --> sup --> client
+    client -- A2A --> kexec
+    client -- A2A --> bexec
+    kexec --> ret
+    bexec --> bgraph --> tools
+    tools -- MCP --> mcp
+    mcp --> svc
+    rest --> svc
+    kexec -.-> shared
+    bexec -.-> shared
 ```
 
-The booking rules live once in `app/booking/service.py` and are used by both the MCP server
-(customers, via the agent) and the owner REST API.
+All four processes share one Python package (`backend/app`) — one codebase, separately deployable
+services. Booking rules live once in `app/booking/service.py`.
 
 ---
 
-## 4. Agent graph (LangGraph)
+## 4. Agent graphs (LangGraph)
+
+### 4.1 Supervisor (API)
 
 ```mermaid
 flowchart LR
     S((START)) --> route["route<br/>flash-lite · structured output<br/>intent + standalone query"]
-    route -- knowledge --> retrieve["retrieve<br/>hybrid search · top 5"]
-    route -- smalltalk --> respond["respond<br/>grounded · cites [n]"]
-    route -- booking --> agent["booking_agent<br/>LLM + MCP tools"]
-    retrieve --> respond
-    respond --> E((END))
-    agent -- "no tool calls" --> E
+    route -- knowledge --> k["knowledge<br/>delegate → Knowledge agent (A2A)"]
+    route -- smalltalk --> respond["respond<br/>local LLM"]
+    route -- booking --> b["booking<br/>delegate → Booking agent (A2A)"]
+    k --> E((END))
+    respond --> E
+    b -- completed --> E
+    b -- "input-required" --> c{{"booking_confirm<br/>⏸ interrupt → reply on same A2A task"}}
+    c -- completed --> E
+    c -- "input-required again" --> c
+```
+
+### 4.2 Booking agent (inside the Booking agent service)
+
+```mermaid
+flowchart LR
+    S((START)) --> agent["booking_agent<br/>LLM + MCP tools"]
+    agent -- "no tool calls" --> E((END))
     agent -- "read tools" --> tools["tools<br/>call MCP"]
-    agent -- "write tools" --> confirm{{"confirm<br/>validate + guardrail<br/>⏸ interrupt"}}
+    agent -- "write tools" --> confirm{{"confirm<br/>validate + guardrail<br/>⏸ interrupt → A2A input-required"}}
     confirm -- approved --> tools
     confirm -- "declined / invalid" --> agent
     tools --> agent
 ```
 
-State is checkpointed to Postgres after every node, keyed by `{business_id}:{thread_id}`, which is
-what lets `confirm` pause and resume in a later HTTP request.
+Supervisor state is checkpointed under `{business_id}:{thread_id}`; the booking agent's under
+`booking:{context_id}` (same Postgres, separate threads).
 
 ---
 
@@ -203,33 +223,33 @@ sequenceDiagram
     A-->>B: SSE done
 ```
 
-### 5.2 Booking with human-in-the-loop
+### 5.2 Booking with human-in-the-loop (across agents)
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant B as Browser
-    participant A as FastAPI
-    participant G as LangGraph
+    participant S as API · Supervisor
+    participant A as Booking agent (A2A)
     participant M as MCP server
     participant P as Postgres
 
-    B->>A: POST /chat "Book a men's haircut tomorrow 4pm, I'm Yash, 98765 43210"
-    A->>G: astream
-    G->>M: tools/call list_services, check_availability
-    M->>P: query services, hours, bookings
-    A-->>B: SSE tool_call / tool_result
-    G->>G: booking_agent wants book_appointment
-    G->>G: confirm: validate ids + grounding guardrail
-    G->>P: checkpoint state, interrupt()
-    A-->>B: SSE confirm {Book appointment, Service, Date, Time, Name, Phone}
+    B->>S: POST /chat "Book a men's haircut Tue 11am, I'm Yash, 98765 43210"
+    S->>A: A2A SendMessage (text + business metadata, context = thread)
+    A->>M: tools/call list_services, check_availability
+    A-->>S: artifacts tool_call / tool_result
+    S-->>B: SSE delegation, tool_call, tool_result
+    A->>A: confirm: validate ids + grounding guardrail, interrupt()
+    A-->>S: status INPUT_REQUIRED {actions}
+    S->>S: store pending task, interrupt() (checkpoint)
+    S-->>B: SSE confirm (card)
     Note over B: Customer clicks Confirm
-    B->>A: POST /chat/resume {approved: true}
-    A->>G: astream(Command(resume))
-    G->>M: tools/call book_appointment
+    B->>S: POST /chat/resume {approved: true}
+    S->>A: A2A SendMessage on SAME task {approved: true}
+    A->>M: tools/call book_appointment
     M->>P: INSERT booking (exclusion constraint guards overlaps)
-    A-->>B: SSE tool_result, token "You're booked for Sunday at 4pm"
-    A-->>B: SSE done
+    A-->>S: streamed answer artifact, COMPLETED
+    S-->>B: SSE tokens "You're booked…", done
 ```
 
 ### 5.3 Document ingestion
@@ -341,6 +361,11 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 | Guardrail validates write args before asking the human | LLMs ignore prompt rules sometimes; invariants are enforced in code |
 | Exclusion constraint for bookings | Only the database can prevent double booking under concurrency |
 | Booking agent sees last 3 full turns | Reuses real ids from earlier tool results instead of guessing |
+| Specialists as A2A services, supervisor keeps the conversation | Independent scaling/deployment, failure isolation, least privilege, interoperability |
+| Supervisor sends the rewritten standalone query to the knowledge agent | Knowledge agent stays stateless and simple |
+| Booking confirmation = A2A `input-required` + supervisor `interrupt()` | HITL maps onto the protocol's task lifecycle; UI/API contract unchanged |
+| Business info as metadata on every A2A message | A2A doesn't persist request metadata across messages |
+| Agent Card public, JSON-RPC bearer-protected | Discovery is the point of a card; calling needs credentials |
 | SSE for chat, WebSocket for voice (planned) | One-way token stream vs two-way audio stream |
 
 ---
@@ -359,8 +384,8 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 1. **Clients** — customer (chat/voice), business owner.
 2. **Frontend** — Next.js.
 3. **API layer** — FastAPI (REST + SSE; later WebSocket for voice).
-4. **Orchestration** — LangGraph supervisor (sketch route → retrieve/respond and booking_agent ⇄ tools with a ⏸ confirm).
-5. **Tools & agents** — MCP server (booking tools); later A2A knowledge + booking agents.
+4. **Orchestration** — LangGraph supervisor (route → delegate, ⏸ confirm).
+5. **Agents & tools** — Knowledge agent and Booking agent (A2A); the booking agent calls the MCP server (tools).
 6. **Data** — Postgres + pgvector (one cylinder, list what it stores), Redis.
 7. **External** — Gemini API (cloud shape).
 

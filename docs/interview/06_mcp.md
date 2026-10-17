@@ -2,6 +2,10 @@
 
 > Phase 2. This is the answer to **"Have you implemented MCP?"** — yes, both sides: we built an MCP
 > server and our LangGraph agent consumes it as an MCP client.
+>
+> **Phase 3 update:** the booking graph now runs inside the **Booking agent A2A service**
+> (`graph/booking_graph.py`, `agents/booking.py`); its confirmation pause surfaces as A2A
+> `input-required`. See [`07_a2a.md`](07_a2a.md). Everything below still applies.
 
 ---
 

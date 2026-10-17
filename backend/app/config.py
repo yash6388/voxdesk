@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     # Shared secret clients must send as `Authorization: Bearer <key>`.
     mcp_api_key: str = "dev-mcp-key-change-me"
 
+    # --- A2A specialist agents ---
+    agents_host: str = "127.0.0.1"
+    knowledge_agent_port: int = 8101
+    booking_agent_port: int = 8102
+    knowledge_agent_url: str = "http://127.0.0.1:8101"
+    booking_agent_url: str = "http://127.0.0.1:8102"
+    # Shared secret the supervisor sends to the agents as `Authorization: Bearer <key>`.
+    a2a_api_key: str = "dev-a2a-key-change-me"
+
     @property
     def psycopg_url(self) -> str:
         """Plain postgres URL for libraries using psycopg (LangGraph checkpointer)."""

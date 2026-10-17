@@ -19,7 +19,8 @@ class ChatState(MessagesState):
     business_timezone: str
     intent: Intent
     search_query: str
-    context: list[dict]
+    # Set while the booking agent waits for the customer's confirmation (A2A input-required).
+    pending_booking: dict | None
 
 
 class Route(BaseModel):

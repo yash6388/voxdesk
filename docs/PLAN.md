@@ -108,10 +108,11 @@ Each phase ends with something demoable and a commit.
 - Bonus: connect Claude Desktop to our MCP server (demo of decoupling)
 - *(Built: see `docs/PROGRESS.md` and `docs/interview/06_mcp.md`)*
 
-### Phase 3 — A2A
-- Move RAG into `agents/knowledge_agent` and booking logic into `agents/booking_agent`, each an A2A server with an Agent Card
+### Phase 3 — A2A ✅
+- Move RAG into a Knowledge agent and booking logic into a Booking agent, each an A2A server with an Agent Card (built in `backend/app/agents/`, separate processes)
 - Supervisor becomes an A2A client: discovers agents, delegates tasks, streams results
-- Escalation path → human handoff (flag conversation in dashboard)
+- Escalation path → human handoff (flag conversation in dashboard) — moved to Phase 5
+- *(Built: see `docs/PROGRESS.md` and `docs/interview/07_a2a.md`)*
 
 ### Phase 4 — Voice
 - WebSocket audio endpoint; browser mic capture in Next.js

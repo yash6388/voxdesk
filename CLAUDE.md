@@ -11,7 +11,9 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 ## Stack
 - `frontend/` — Next.js (App Router, TypeScript, Tailwind)
 - `backend/` — FastAPI (Python 3.13, uv), LangGraph supervisor, Gemini API
-- `agents/` — A2A specialist services (knowledge_agent, booking_agent) — Phase 3
+- `backend/app/agents/` — A2A specialist services: knowledge (:8101), booking (:8102); `backend/app/a2a/` — A2A server/client helpers
+- `backend/app/graph/` — `supervisor.py` (API graph), `booking_graph.py` (runs in booking agent)
+- `backend/scripts/dev_services.sh` — starts MCP + both agents; API runs separately
 - `backend/app/mcp/` — our own FastMCP booking server, run separately: `uv run python -m app.mcp.server` (:8001)
 - `backend/app/booking/` — booking domain rules (shared by MCP server + owner REST API)
 - `backend/scripts/seed_demo.py` — demo salon data (`uv run python -m scripts.seed_demo`)

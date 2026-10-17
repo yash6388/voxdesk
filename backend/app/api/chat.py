@@ -9,23 +9,18 @@ from langgraph.types import Command
 
 from app.api.businesses import get_business_or_404
 from app.api.deps import SessionDep
+from app.errors import is_rate_limited
 from app.schemas import ChatHistory, ChatMessage, ChatRequest, ChatResume
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-# Nodes whose LLM output is shown to the customer as it streams.
-STREAMED_NODES = {"respond", "booking_agent"}
-
-
-def is_rate_limited(exc: BaseException) -> bool:
-    """True if the LLM provider rejected the call for quota/rate limits (HTTP 429)."""
-    while exc is not None:
-        if getattr(exc, "code", None) == 429 or "RESOURCE_EXHAUSTED" in str(exc):
-            return True
-        exc = exc.__cause__ or exc.__context__
-    return False
+# Supervisor nodes whose own LLM output is streamed (small talk). Remote agents'
+# output arrives through the "custom" stream instead.
+STREAMED_NODES = {"respond"}
+# Events relayed from remote agents (see graph/supervisor.py `delegate`).
+RELAYED = {"token", "sources", "tool_call", "tool_result", "delegation"}
 
 
 def sse(event: str, data: dict | list) -> str:
@@ -40,45 +35,32 @@ def graph_config(business_id: uuid.UUID, thread_id: str) -> dict:
 
 async def stream_run(graph, graph_input, config: dict, thread_id: str) -> AsyncIterator[str]:
     """Run the graph and translate its progress into SSE events:
-    meta → route → sources | tool_call / tool_result … → token* → confirm? → done (or error)."""
+    meta → route → delegation / sources / tool_call / tool_result … → token* → confirm? → done."""
     yield sse("meta", {"thread_id": thread_id})
     try:
-        # "messages" mode yields LLM tokens as they're generated;
-        # "updates" mode yields each node's output when the node finishes.
+        # "messages": LLM tokens from the supervisor itself (small talk);
+        # "custom":   events relayed from the A2A agents (tokens, sources, tool calls…);
+        # "updates":  each node's output when it finishes (routing, interrupts).
         async for mode, payload in graph.astream(
-            graph_input, config, stream_mode=["messages", "updates"]
+            graph_input, config, stream_mode=["messages", "custom", "updates"]
         ):
             if mode == "messages":
                 chunk, metadata = payload
                 if metadata.get("langgraph_node") in STREAMED_NODES and chunk.text:
                     yield sse("token", {"text": chunk.text})
-                continue
-
-            for node, update in payload.items():
-                if node == "__interrupt__":
-                    # The graph paused in `confirm`: ask the customer to approve.
-                    yield sse("confirm", update[0].value)
-                elif not update:
-                    continue
-                elif node == "route":
-                    yield sse("route", {k: update[k] for k in ("intent", "search_query")})
-                elif node == "retrieve":
-                    yield sse(
-                        "sources",
-                        [
-                            {k: c[k] for k in ("filename", "chunk_index", "content", "score")}
-                            for c in update["context"]
-                        ],
-                    )
-                elif node == "booking_agent":
-                    for call in getattr(update["messages"][-1], "tool_calls", None) or []:
-                        yield sse("tool_call", {"name": call["name"], "args": call["args"]})
-                elif node == "tools":
-                    for m in update["messages"]:
-                        yield sse(
-                            "tool_result",
-                            {"name": m.name, "status": m.status, "content": m.text[:500]},
-                        )
+            elif mode == "custom":
+                kind = payload.get("type")
+                if kind == "token":
+                    yield sse("token", {"text": payload["text"]})
+                elif kind in RELAYED:
+                    yield sse(kind, payload.get("data", payload))
+            else:
+                for node, update in payload.items():
+                    if node == "__interrupt__":
+                        # The graph paused in `booking_confirm`: ask the customer to approve.
+                        yield sse("confirm", update[0].value)
+                    elif node == "route" and update:
+                        yield sse("route", {k: update[k] for k in ("intent", "search_query")})
     except Exception as exc:
         if is_rate_limited(exc):
             logger.warning("LLM rate limit hit (thread %s)", thread_id)
