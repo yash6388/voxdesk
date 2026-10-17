@@ -45,29 +45,35 @@ def _fallback_model(temperature: float) -> BaseChatModel | None:
     )
 
 
+def _primary_retries(fallback: BaseChatModel | None) -> int:
+    """With a fallback, fail over immediately instead of retrying (measured: a 429 fails
+    in ~0.5 s with 0 retries vs ~2.3 s with 2). Without one, a couple of retries help."""
+    return 0 if fallback is not None else 2
+
+
 def chat_llm() -> Runnable:
     """Model for customer-facing answers and the booking agent."""
     s = get_settings()
+    fallback = _fallback_model(0.3)
     primary = ChatGoogleGenerativeAI(
         model=s.chat_model,
         google_api_key=s.google_api_key,
         temperature=0.3,
         thinking_budget=0,  # no "thinking" pass: lower latency for chat/voice
-        # Fail fast: a customer shouldn't wait ~35 s of silent backoff on a 429 —
-        # especially now that a fallback model can answer instead.
-        max_retries=2,
+        max_retries=_primary_retries(fallback),
     )
-    return with_fallback(primary, _fallback_model(0.3))
+    return with_fallback(primary, fallback)
 
 
 def router_llm() -> Runnable:
     """Small, fast model for intent classification and query rewriting."""
     s = get_settings()
+    fallback = _fallback_model(0)
     primary = ChatGoogleGenerativeAI(
         model=s.router_model,
         google_api_key=s.google_api_key,
         temperature=0,
         thinking_budget=0,
-        max_retries=2,
+        max_retries=_primary_retries(fallback),
     )
-    return with_fallback(primary, _fallback_model(0))
+    return with_fallback(primary, fallback)

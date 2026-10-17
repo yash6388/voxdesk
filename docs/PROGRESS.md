@@ -15,6 +15,9 @@
 - [x] 65 tests (17 new): text helpers, PyAV decode, ElevenLabs request shapes (MockTransport), WebSocket end-to-end incl. spoken booking confirmation
 - [x] Live: real Whisper transcribed speech sent over the WebSocket; real Kokoro spoke the reply (Gemini still 429)
 - [x] **LLM fallback:** every chat model is `Gemini.with_fallbacks([OpenAI-compatible model])` when `FALLBACK_API_KEY` (or `HF_TOKEN`/`HUGGINGFACE_API_KEY`) is set — provider chosen by `FALLBACK_BASE_URL` + `FALLBACK_MODEL` (Groq / OpenRouter / Hugging Face) (router, small talk, knowledge agent, booking agent tool calls); structured output forced to function-calling for HF providers; embeddings deliberately have no fallback. 5 tests (70 total). Live: Hugging Face token valid but account has **no inference credits (402)** → switch provider (e.g. Groq free tier) or buy credits
+- [x] **Full end-to-end verified live** (all services + Groq fallback): small talk; knowledge via A2A with follow-up rewrite; booking via A2A → MCP list/check/book → input-required → confirm → saved in Postgres; voice question → Whisper → knowledge agent → Kokoro
+- [x] Latency fix: with a fallback configured, Gemini `max_retries=0` (a 429 now fails over in ~0.5 s instead of ~2.3 s per call)
+- [x] Booking tools return a short customer `reference` (e.g. `DC2A71`); prompt forbids reading out ids
 - Measured on laptop CPU: Whisper ~0.7 s for a 5.5 s utterance; Kokoro ~2.6 s for 5.5 s of audio (RTF ~0.47)
 
 ### Phase 3 done
@@ -145,5 +148,7 @@
 | 2026-10-18 | Spoken confirmation: any "no" wins, ambiguity re-prompts | A wrong "yes" books a real appointment |
 | 2026-10-18 | LLM fallback to any OpenAI-compatible provider (default Hugging Face router; Groq/OpenRouter by config) | Free-tier Gemini 429s; provider redundancy is a standard resilience pattern |
 | 2026-10-18 | Fallback model = Groq `openai/gpt-oss-120b` | Free tier, ~250–600 ms incl. tool calls + structured output; chosen by live comparison against the account's model list |
+| 2026-10-18 | No Gemini retries when a fallback exists | Measured 0.49 s vs 2.34 s to fail on 429; retries were adding ~2 s per call per layer |
+| 2026-10-18 | Short booking `reference` alongside `booking_id` | Agent still needs the full id for follow-up tools; customers (and voice) need something short |
 | 2026-10-18 | No embedding fallback | Different embedding models produce incomparable vector spaces; would require re-embedding all chunks |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

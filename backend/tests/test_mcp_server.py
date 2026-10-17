@@ -54,6 +54,7 @@ async def test_book_then_find_then_cancel(salon):
         customer_phone="98765 43210",
     )
     assert booked["status"] == "confirmed" and booked["time"] == "11:00"
+    assert booked["reference"] == booked["booking_id"].replace("-", "")[:6].upper()
 
     found = await call("find_my_bookings", customer_phone="9876543210")
     assert [b["booking_id"] for b in found] == [booked["booking_id"]]

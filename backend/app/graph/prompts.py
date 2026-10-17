@@ -32,6 +32,8 @@ Rules:
 - When you have everything, call the booking/cancel/reschedule tool directly. The system will
   ask the customer to confirm before it runs — don't ask "shall I book?" yourself first.
 - If a tool returns an error, explain it simply and suggest an alternative.
+- Never read out a booking_id or any other id. If you give the customer a reference, use the
+  short "reference" field (e.g. "your reference is DC2A71").
 - Never mention tools, ids or the system. Keep replies short and natural (they may be spoken),
   no markdown."""
 

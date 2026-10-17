@@ -77,6 +77,11 @@ def _uuid(value: str, what: str) -> uuid.UUID:
         raise ToolError(f"Invalid {what} id.") from None
 
 
+def short_reference(booking_id: uuid.UUID) -> str:
+    """A customer-friendly reference: 'DC2A71' instead of a 36-character UUID."""
+    return booking_id.hex[:6].upper()
+
+
 def _service_dict(s: Service, business: Business) -> dict:
     return {
         "service_id": str(s.id),
@@ -90,7 +95,8 @@ def _service_dict(s: Service, business: Business) -> dict:
 def _booking_dict(b: Booking, business: Business) -> dict:
     start = booking.to_local(business, b.start_at)
     return {
-        "booking_id": str(b.id),
+        "booking_id": str(b.id),  # for the agent's own follow-up tool calls
+        "reference": short_reference(b.id),  # what to tell the customer
         "service": b.service.name,
         "date": start.date().isoformat(),
         "time": start.strftime("%H:%M"),
