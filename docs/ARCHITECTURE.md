@@ -61,7 +61,7 @@ flowchart LR
 
 | Component | Responsibility | Tech | Status |
 |---|---|---|---|
-| Frontend | Business setup, document upload, chat (later voice + dashboard) | Next.js, TypeScript, Tailwind | ✅ Phase 1 |
+| Frontend | Landing page; dashboard: businesses, knowledge base, playground with agent inspector (later bookings, voice, analytics) | Next.js, TypeScript, Tailwind, Lucide | ✅ Phase 1 |
 | API | REST endpoints, SSE streaming, validation, (later) auth | FastAPI, Pydantic | ✅ Phase 1 |
 | Supervisor | Classifies intent, rewrites queries, orchestrates steps, keeps memory | LangGraph, Gemini | ✅ Phase 1 (becomes A2A client in Phase 3) |
 | RAG | Ingestion + hybrid retrieval | pgvector, Postgres full-text, Gemini embeddings | ✅ Phase 1 (moves into knowledge agent in Phase 3) |

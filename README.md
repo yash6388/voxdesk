@@ -56,9 +56,11 @@ npm run dev
 
 ## Try it (UI)
 
-Open http://localhost:3000 → create a business → upload `samples/glow-studio-salon.md` →
-chat: *"How much is a keratin treatment?"*, then *"And how long does it take?"*.
-Each reply shows the agent's routing decision and the sources it cited.
+Open http://localhost:3000 → **Open dashboard** → **New business** → upload
+`samples/glow-studio-salon.md` in the Knowledge base → open the **Playground** and ask
+*"How much is a keratin treatment?"*, then *"And how long does it take?"*.
+The **Agent Inspector** shows the routing decision, the rewritten search query, the cited sources
+and the latency for each reply.
 
 ## Try it (API)
 

@@ -28,6 +28,7 @@
 - [x] Streaming chat: typed SSE parser over `fetch` (POST), route badge + searched query, collapsible sources, error display
 - [x] Conversation restore after reload (thread id in localStorage → history from checkpoint), "New chat"
 - [x] Lint + typecheck + build pass; verified live: events `meta → route → sources → token… → done`
+- [x] **SaaS redesign:** landing page; `/dashboard` app shell with sidebar (mobile drawer); businesses cards + create modal + empty state; knowledge base page (stats, drag-and-drop, status table); Playground with citation chips, suggestions, typing dots and **Agent Inspector** (route, rewritten query, sources, time-to-first-token); design system in `components/ui/` (brand gradient, light/dark tokens, Lucide icons)
 
 ## Next up — Phase 2 (MCP)
 - [ ] Data model: services, availability/slots, bookings (+ Alembic migration)
@@ -75,4 +76,6 @@
 | 2026-10-17 | Frontend parses SSE manually with fetch + ReadableStream | EventSource is GET-only; chat needs POST with JSON body |
 | 2026-10-17 | Thread id in localStorage, history from server checkpoint | Server is source of truth; browser only remembers which thread |
 | 2026-10-17 | Poll document status (2s, only while processing) | Simple and sufficient; push (Redis pub/sub) only if needed later |
+| 2026-10-17 | SaaS-style UI: landing + dashboard shell, shared `components/ui` design system | Owner wants a modern, attractive product look, not a dev tool; consistent components keep new pages cheap |
+| 2026-10-17 | Agent Inspector panel with client-measured TTFT | Makes routing/retrieval visible for demos/debugging; TTFT is the key metric for voice later |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

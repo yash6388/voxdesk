@@ -7,27 +7,46 @@
 
 ## 1. Plain English first
 
-The frontend is a Next.js app with two screens:
-1. **Home (`/`)** — list of businesses + a form to create one.
-2. **Business workspace (`/b/[id]`)** — left: the *knowledge base* (upload documents, watch them go
-   `processing → ready`); right: a *chat* with the business's AI assistant, where answers appear
-   word by word, with the agent's routing decision and the sources it used.
+The frontend is a Next.js SaaS app with a public landing page and a dashboard:
+
+| Route | Screen |
+|---|---|
+| `/` | **Landing page** — hero with a chat preview, features (built + coming soon), how it works, CTA |
+| `/dashboard` | **Businesses** — cards with gradient avatars, "New business" modal, empty state |
+| `/dashboard/b/[id]` | **Playground** — chat with the business's agent + **Agent Inspector** (route, rewritten query, sources with scores, latency) |
+| `/dashboard/b/[id]/knowledge` | **Knowledge base** — stats, drag-and-drop upload, documents table with live status |
 
 ```
 frontend/src/
 ├── app/
-│   ├── layout.tsx          header (logo + backend status dot) wrapping every page
-│   ├── page.tsx            home → <BusinessList/>
-│   └── b/[id]/page.tsx     workspace → <DocumentPanel/> + <ChatPanel/>
+│   ├── layout.tsx                      fonts + global styles only
+│   ├── page.tsx                        landing page
+│   └── dashboard/
+│       ├── layout.tsx                  app shell: sidebar + content
+│       ├── page.tsx                    businesses
+│       └── b/[id]/
+│           ├── page.tsx                playground (chat + inspector)
+│           └── knowledge/page.tsx      knowledge base
 ├── components/
-│   ├── BackendStatus.tsx   green/red dot from GET /health
-│   ├── BusinessList.tsx    list + create form
-│   ├── DocumentPanel.tsx   upload, status polling, delete
-│   └── ChatPanel.tsx       streaming chat, route badge, sources, history restore
-└── lib/api.ts              typed API client + SSE stream parser
+│   ├── ui/                             design system: Button, Card, Badge, Input, Dialog, PageHeader
+│   ├── app/Sidebar.tsx                 navigation (desktop sidebar + mobile drawer)
+│   ├── chat/ChatPanel.tsx              streaming chat, citations, suggestions
+│   ├── chat/Inspector.tsx              per-turn agent trace + latency
+│   ├── Logo.tsx, BackendStatus.tsx
+└── lib/
+    ├── api.ts                          typed API client + SSE stream parser
+    ├── useDocuments.ts                 documents hook (upload, delete, polling)
+    └── utils.ts                        cn(), avatar gradients, formatting
 ```
 
----
+### Design system
+- **Tokens** in `globals.css` (`--background`, `--surface`, `--border`, `--muted`) exposed to
+  Tailwind as `bg-surface`, `border-border`, `text-muted` — light and dark mode switch by changing
+  token values only.
+- **Brand:** indigo → violet → fuchsia gradient (logo, primary buttons, user bubbles, CTA).
+- **Shared components** in `components/ui/` so every page looks consistent; icons from Lucide.
+- Small touches that make it feel like a product: skeleton loaders, fade-in animations, typing
+  dots, empty states with a clear next action, live "API online" indicator.
 
 ## 2. Next.js basics you should know
 
@@ -88,20 +107,26 @@ Key details:
   `for await (const ev of streamChat(...))` and handles each event type.
 - **`AbortController`** — "New chat" or leaving the page cancels the in-flight request.
 
-### How events update the UI (`ChatPanel.tsx`)
-On send, the UI immediately adds the user's message and an **empty assistant message**, then fills
-that last message as events arrive:
+### How events update the UI (`components/chat/ChatPanel.tsx`)
+On send, the UI immediately adds the user's message and an **empty assistant message** (with its own
+id), then patches that message as events arrive:
 
 | Event | UI effect |
 |---|---|
 | `meta` | Save `thread_id` (state + `localStorage`) |
-| `route` | Show badge: 📚 knowledge · searched "keratin treatment cost" |
-| `sources` | Collapsible list of cited chunks with scores |
-| `token` | Append text → the answer appears progressively |
+| `route` | Inspector shows intent + the rewritten search query |
+| `sources` | Inspector lists cited chunks with RRF scores; `[1]` in the answer becomes a citation chip |
+| `token` | Append text → the answer appears progressively; first token records **time-to-first-token** |
 | `error` | Show error inline |
 
-The route badge and sources make the **agent's reasoning visible** — useful for debugging and a
-great demo moment in an interview.
+### The Agent Inspector
+Clicking any reply shows, for that turn: the **route** (knowledge / booking / small talk), the
+**standalone search query** the router produced, the **sources** with scores, and **latency**
+(time to first token and total, measured in the browser with `performance.now()`).
+
+Why build it: it makes the agent's reasoning visible — great for debugging, and the best demo
+moment in an interview ("watch the router rewrite my follow-up question"). Time-to-first-token is
+also the metric that matters most once voice arrives in Phase 4.
 
 ---
 
@@ -118,7 +143,7 @@ great demo moment in an interview.
 
 ## 6. Upload status: polling
 
-Ingestion runs as a background task on the server (`202 Accepted`). The document panel polls
+Ingestion runs as a background task on the server (`202 Accepted`). The `useDocuments` hook polls
 `GET /documents` **every 2 seconds, only while at least one document is `processing`**, and stops
 automatically when everything is `ready`/`failed`.
 
