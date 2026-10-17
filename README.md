@@ -30,7 +30,17 @@ voxdesk/
 └── docker-compose.yml   Postgres (pgvector) + Redis
 ```
 
-## Running locally
+## Running with Docker (everything, one command)
+
+```bash
+cp .env.example backend/.env      # add GOOGLE_API_KEY (and optionally FALLBACK_API_KEY)
+docker compose --profile app up -d --build
+```
+Opens on http://localhost:3000 (API on :8000). The first start downloads the local voice models
+(~250 MB) into a Docker volume. Seven services start: Postgres, Redis, API, MCP server, Knowledge
+agent, Booking agent and the frontend. `docker compose --profile app down` stops them.
+
+## Running locally (development)
 
 **Prerequisites:** Docker, [uv](https://docs.astral.sh/uv/), Node.js 22+
 

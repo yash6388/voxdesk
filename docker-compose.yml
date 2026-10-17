@@ -1,4 +1,35 @@
-# Local infrastructure. Start with: docker compose up -d
+# VoxDesk local stack.
+#
+#   docker compose up -d                       → infrastructure only (Postgres + Redis);
+#                                                run API/agents/frontend yourself (dev mode)
+#   docker compose --profile app up -d --build → EVERYTHING in containers
+#                                                (stop locally-run API/agents/frontend first:
+#                                                 same ports)
+#
+# Secrets (GOOGLE_API_KEY, FALLBACK_API_KEY, …) come from backend/.env.
+
+x-backend: &backend
+  build: ./backend
+  image: voxdesk-backend
+  profiles: ["app"]
+  restart: unless-stopped
+  env_file:
+    - path: ./backend/.env
+      required: false
+  environment: &backend-env
+    # Containers reach each other by service name on the Compose network.
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-voxdesk}:${POSTGRES_PASSWORD:-voxdesk}@postgres:5432/${POSTGRES_DB:-voxdesk}
+    REDIS_URL: redis://redis:6379/0
+    MCP_HOST: 0.0.0.0
+    MCP_URL: http://mcp:8001/mcp
+    AGENTS_HOST: 0.0.0.0
+    KNOWLEDGE_AGENT_URL: http://knowledge:8101
+    BOOKING_AGENT_URL: http://booking:8102
+    CORS_ORIGINS: '["http://localhost:3000"]'
+  depends_on:
+    postgres:
+      condition: service_healthy
+
 services:
   postgres:
     # Postgres 16 with the pgvector extension preinstalled
@@ -27,5 +58,78 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------- application (profile "app") ----------
+
+  api:
+    <<: *backend
+    # Runs migrations, ensures voice models, then serves the API + supervisor.
+    command: ["./scripts/docker_api.sh"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - voice_models:/app/data/models
+      - hf_cache:/home/app/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  mcp:
+    <<: *backend
+    command: ["python", "-m", "app.mcp.server"]
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  knowledge:
+    <<: *backend
+    command: ["python", "-m", "app.agents.knowledge"]
+    ports:
+      - "8101:8101"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8101/.well-known/agent-card.json')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  booking:
+    <<: *backend
+    command: ["python", "-m", "app.agents.booking"]
+    ports:
+      - "8102:8102"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8102/.well-known/agent-card.json')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the browser bundle: the browser calls the API on the host.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    image: voxdesk-frontend
+    profiles: ["app"]
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  voice_models:
+  hf_cache:

@@ -30,6 +30,7 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - Don't create placeholder folders/files for future phases.
 - The owner often has `uvicorn --reload` (:8000) and `next dev` (:3000) running. Check ports before starting servers, and **never run `npm run build` while `next dev` is running** (both write `.next/` and break the dev server).
 - Never run `git commit`/`git push` — give the owner the commands instead.
+- Docker: `docker compose up -d` = infra only (dev); `docker compose --profile app up -d --build` = full stack (conflicts with locally running API/agents/frontend ports).
 
 ## Out of scope for now
 - Twilio / phone calls (dropped; the voice pipeline is transport-agnostic so it can be added later as an adapter).

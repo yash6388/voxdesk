@@ -66,29 +66,18 @@
 - [x] Lint + typecheck + build pass; verified live: events `meta → route → sources → token… → done`
 - [x] **SaaS redesign:** landing page; `/dashboard` app shell with sidebar (mobile drawer); businesses cards + create modal + empty state; knowledge base page (stats, drag-and-drop, status table); Playground with citation chips, suggestions, typing dots and **Agent Inspector** (route, rewritten query, sources, time-to-first-token); design system in `components/ui/` (brand gradient, light/dark tokens, Lucide icons)
 
-## Next up — Phase 5 (production polish)
-- [ ] Live end-to-end check through the agents + voice once Gemini quota resets (or with a paid key)
-- [ ] Optional: add ELEVENLABS_API_KEY and try `TTS_PROVIDER=elevenlabs`
-- [x] Fallback provider: **Groq `openai/gpt-oss-120b`** — live-tested: plain answer 247 ms, tool calling 297 ms (correct args), structured output 596 ms. (`llama-3.3-70b-versatile` retired on Groq; `qwen/qwen3.8-27b` free tier capped at 1k output tokens/min)
-- [ ] Write `09_production.md` incl. the LLM fallback story (and show which model answered in the Inspector)
-- [ ] Tracing (Langfuse), evaluation suite (retrieval hit rate, routing/tool accuracy, latency)
-- [ ] Auth for the dashboard, rate limiting (Redis), input guardrails, cost tracking
-- [ ] Analytics page; human handoff
-- [ ] Dockerfiles + Compose for all services; deployment
-- [ ] Human handoff / escalation path (moved to Phase 5 dashboard work)
-- [ ] Dockerfiles + Compose services for API, agents and MCP (Phase 5)
-- [ ] Optional demo: connect MCP Inspector / Claude Desktop to the MCP server
-
-## Known limitations / ideas
-- Chunking is character-based (1000 chars); markdown-header-aware splitting would give cleaner sections.
-- Gemini streams in large chunks, so short answers arrive in 1–3 token events.
-- No reranker yet (FilingLens has one) — candidate improvement with an eval set in Phase 5.
-- **Gemini free tier = 20 requests/day per model** for this project; a booking conversation uses several calls. Use a paid key or wait for reset; consider model fallbacks.
-- One booking at a time per business (no staff/resources yet); phone number is a lightweight ownership check (no OTP).
-- MCP auth is a shared static key (production: OAuth 2.1 / per-client keys).
-- A2A task stores are in memory: an `input-required` task is lost if an agent restarts (fix: `DatabaseTaskStore`).
-- Booking agent only sees booking turns (its own memory).
-- Voice is push-to-talk (no VAD) and STT runs after the recording ends (no streaming partials); English only.
+## Next up — Phase 5 (production polish) — agreed plan (2026-10-18)
+Order: 1 → 6, then final docs; deployment target decided later (repo made deploy-ready).
+- [x] 1. Docker: one backend image (API/MCP/agents, non-root, uv-locked deps) + standalone Next.js image; Compose `app` profile (`docker compose --profile app up -d --build` → 7 services with healthchecks, voice models in volumes, migrations on API start); CI job builds both images. Smoke-tested images: API readiness all up, MCP 401 without key, frontend 200. Images: backend 1.6 GB (speech runtimes), frontend 243 MB
+- [ ] 2. Auth + multi-tenancy: owner signup/login (JWT), businesses owned by users, protected dashboard; public customer chat link per business
+- [ ] 3. Protection: Redis rate limiting (per IP / per business), input guardrails (length, prompt-injection checks)
+- [ ] 4. Observability: Langfuse tracing (steps, latency, tokens, which model answered)
+- [ ] 5. Evaluation suite: golden set → retrieval hit-rate@k, routing accuracy, tool-call accuracy, faithfulness (LLM judge), latency; reranker experiment
+- [ ] 6. Analytics page + human handoff
+- [ ] 7. Final docs: `09_production.md`, `PROJECT_EXPLAINED.md`, `PITCH.md`, `SYSTEM_DESIGN.md`, README polish (+ demo GIF)
+- [ ] 8. Owner's personal testing (1–2 days) → fix UI/bugs found
+- [ ] Later: choose deployment target and deploy
+- Pending live checks: latency after no-retry/breaker changes; ElevenLabs; full voice booking
 
 ## Before Phase 4 (agreed checkpoint)
 - Review Phases 1–3 together: what was built and why.
@@ -153,5 +142,7 @@
 | 2026-10-18 | No Gemini retries when a fallback exists | Measured 0.49 s vs 2.34 s to fail on 429; retries were adding ~2 s per call per layer |
 | 2026-10-18 | Short booking `reference` alongside `booking_id` | Agent still needs the full id for follow-up tools; customers (and voice) need something short |
 | 2026-10-18 | Circuit breaker on the primary LLM + `LLM_PRIMARY` switch | Stop paying a 429 round trip per call when the provider is known to be down; manual override for dev |
+| 2026-10-18 | One backend image for API, MCP and agents; Compose profiles | Same code, different command; `docker compose up` keeps the infra-only dev flow, `--profile app` runs everything |
+| 2026-10-18 | Voice models in Docker volumes, not baked into images | Smaller images; downloaded once on first start |
 | 2026-10-18 | No embedding fallback | Different embedding models produce incomparable vector spaces; would require re-embedding all chunks |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

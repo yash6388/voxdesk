@@ -114,7 +114,10 @@ flowchart TB
 ```
 
 Run locally: `docker compose up -d`, `./scripts/dev_services.sh` (MCP + both agents), the API
-(`uvicorn app.main:app --reload`) and the frontend (`npm run dev`).
+(`uvicorn app.main:app --reload`) and the frontend (`npm run dev`) — **or everything in containers:
+`docker compose --profile app up -d --build`** (one backend image runs as `api`, `mcp`, `knowledge`,
+`booking`; plus `frontend`, `postgres`, `redis`; healthchecks gate start-up order; services reach each
+other by name, e.g. `http://knowledge:8101`).
 
 ---
 
