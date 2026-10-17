@@ -4,6 +4,10 @@
 
 > 🚧 Work in progress. See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap and [`docs/PROGRESS.md`](docs/PROGRESS.md) for current status.
 
+## Architecture
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams (system overview, agent graph, request flows, data model).
+
 ## Tech stack
 
 | Layer | Tech |
@@ -49,6 +53,12 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Try it (UI)
+
+Open http://localhost:3000 → create a business → upload `samples/glow-studio-salon.md` →
+chat: *"How much is a keratin treatment?"*, then *"And how long does it take?"*.
+Each reply shows the agent's routing decision and the sources it cited.
 
 ## Try it (API)
 

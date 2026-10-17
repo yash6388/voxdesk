@@ -5,6 +5,7 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 ## Read first
 - `docs/PLAN.md` — full plan, architecture, phases, tech decisions (source of truth)
 - `docs/PROGRESS.md` — what's done, what's next, decision log. **Update it at the end of every work session.**
+- `docs/ARCHITECTURE.md` — living architecture doc with Mermaid diagrams (overview, deployment, components, agent graph, sequence flows, ER model). **Update it after each phase** (flip planned → built, add new flows/tables).
 - `docs/interview/` — beginner-friendly interview notes. **After each phase, add/update the topic file** (see `00_INDEX.md`): plain English → how it works (with file refs) → why/trade-offs → real results → limitations → Q&A. `PROJECT_EXPLAINED.md`, `PITCH.md` and `SYSTEM_DESIGN.md` are written only at the very end.
 
 ## Stack
@@ -21,6 +22,8 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - Config via env vars (`.env`, never committed; keep `.env.example` updated).
 - Ruff for lint/format, pytest for tests. Small, focused commits.
 - Don't create placeholder folders/files for future phases.
+- The owner often has `uvicorn --reload` (:8000) and `next dev` (:3000) running. Check ports before starting servers, and **never run `npm run build` while `next dev` is running** (both write `.next/` and break the dev server).
+- Never run `git commit`/`git push` — give the owner the commands instead.
 
 ## Out of scope for now
 - Twilio / phone calls (dropped; voice pipeline is transport-agnostic so it can be added later as an adapter).

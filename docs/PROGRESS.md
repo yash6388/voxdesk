@@ -3,7 +3,7 @@
 > Update at the end of every work session: tick tasks, set "Next up", add decisions.
 
 ## Current status
-**Phase 1 — Text core + RAG** · backend ✅ done, frontend next
+**Phase 1 — Text core + RAG ✅ done** · next: Phase 2 (MCP)
 
 ### Phase 0 done
 - [x] GitHub repo `yash6388/voxdesk` created, remote connected
@@ -22,9 +22,21 @@
 - [x] 13 tests (fake embedder + fake LLMs, real Postgres test DB); CI runs pgvector service
 - [x] Verified live with Gemini on `samples/glow-studio-salon.md` (follow-up rewrite, refusal on unknown info, routing)
 
-## Next up
-- [ ] Phase 1 frontend: business create/select, document upload + status, streaming chat UI with sources
-- [ ] Then Phase 2 (MCP booking server)
+### Phase 1 frontend done
+- [x] Home: list + create businesses
+- [x] Workspace `/b/[id]`: document upload (multi-file), status polling while processing, delete
+- [x] Streaming chat: typed SSE parser over `fetch` (POST), route badge + searched query, collapsible sources, error display
+- [x] Conversation restore after reload (thread id in localStorage → history from checkpoint), "New chat"
+- [x] Lint + typecheck + build pass; verified live: events `meta → route → sources → token… → done`
+
+## Next up — Phase 2 (MCP)
+- [ ] Data model: services, availability/slots, bookings (+ Alembic migration)
+- [ ] `mcp_servers/voxdesk_mcp`: FastMCP server (streamable HTTP) — tools: list_services, check_availability, book_appointment, reschedule, cancel; validation (no double booking, no past slots)
+- [ ] LangGraph booking node → agent with MCP tools via `langchain-mcp-adapters`
+- [ ] Human-in-the-loop: `interrupt()` before confirming a booking → UI confirm → resume
+- [ ] Frontend: manage services/hours; confirm-booking UI in chat; bookings list
+- [ ] Tests + interview note `06_mcp.md`
+- [ ] Bonus demo: connect Claude Desktop / MCP Inspector to our server
 
 ## Known limitations / ideas
 - Chunking is character-based (1000 chars); markdown-header-aware splitting would give cleaner sections.
@@ -39,7 +51,7 @@
 
 ## Phase checklist
 - [x] Phase 0 — Setup
-- [ ] Phase 1 — Text core + RAG
+- [x] Phase 1 — Text core + RAG
 - [ ] Phase 2 — MCP
 - [ ] Phase 3 — A2A
 - [ ] Phase 4 — Voice
@@ -60,4 +72,7 @@
 | 2026-10-17 | Router also rewrites follow-ups into standalone search queries | One LLM call does intent + query rewrite; fixes "and how long does it take?" retrieval |
 | 2026-10-17 | Thread IDs namespaced as `{business_id}:{thread_id}` | Prevents cross-tenant access to conversation checkpoints |
 | 2026-10-17 | FastAPI BackgroundTasks for ingestion (not Celery yet) | Simple for now; move to a queue if uploads get large/many |
+| 2026-10-17 | Frontend parses SSE manually with fetch + ReadableStream | EventSource is GET-only; chat needs POST with JSON body |
+| 2026-10-17 | Thread id in localStorage, history from server checkpoint | Server is source of truth; browser only remembers which thread |
+| 2026-10-17 | Poll document status (2s, only while processing) | Simple and sufficient; push (Redis pub/sub) only if needed later |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

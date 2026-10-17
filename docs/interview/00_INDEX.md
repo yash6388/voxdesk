@@ -12,6 +12,8 @@ Each file is written right after the phase it covers, while the details are fres
 3. Practise the **"Say it like this"** boxes out loud — those are interview-ready answers.
 4. Go through the **Q&A** at the end of each file; cover the answer and try first.
 
+> **Diagrams:** see [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — system overview, sequence flows and data model (Mermaid; importable into draw.io).
+
 ## Topic files (written as we build)
 
 | # | File | Covers | Status |
@@ -20,10 +22,11 @@ Each file is written right after the phase it covers, while the details are fres
 | 02 | [02_rag_pipeline.md](02_rag_pipeline.md) | Ingestion, chunking, embeddings, pgvector, hybrid search, RRF, indexes, multi-tenancy | ✅ Phase 1 |
 | 03 | [03_langgraph_agent.md](03_langgraph_agent.md) | LangGraph state machine, router, query rewriting, memory/checkpointer, SSE streaming | ✅ Phase 1 |
 | 04 | [04_testing.md](04_testing.md) | Testing strategy: fakes for LLMs/embeddings, real Postgres, CI | ✅ Phase 1 |
-| 05 | `05_mcp.md` | Our MCP server, MCP vs function calling, human-in-the-loop booking | ⏳ Phase 2 |
-| 06 | `06_a2a.md` | A2A protocol, Agent Cards, MCP vs A2A | ⏳ Phase 3 |
-| 07 | `07_voice.md` | STT → agent → TTS pipeline, latency, barge-in | ⏳ Phase 4 |
-| 08 | `08_production.md` | Tracing, evals, auth, rate limiting, deployment | ⏳ Phase 5 |
+| 05 | [05_frontend.md](05_frontend.md) | Next.js app, typed API client, reading SSE streams, history restore, upload polling, CORS | ✅ Phase 1 |
+| 06 | `06_mcp.md` | Our MCP server, MCP vs function calling, human-in-the-loop booking | ⏳ Phase 2 |
+| 07 | `07_a2a.md` | A2A protocol, Agent Cards, MCP vs A2A | ⏳ Phase 3 |
+| 08 | `08_voice.md` | STT → agent → TTS pipeline, latency, barge-in | ⏳ Phase 4 |
+| 09 | `09_production.md` | Tracing, evals, auth, rate limiting, deployment | ⏳ Phase 5 |
 
 ## Final files (written at the end, once everything is built)
 

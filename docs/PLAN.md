@@ -26,6 +26,8 @@ FilingLens (existing project) already proves RAG + evaluation. VoxDesk adds what
 
 ## 3. Architecture
 
+> Detailed, always-current diagrams (components, sequence flows, data model): [`ARCHITECTURE.md`](ARCHITECTURE.md)
+
 ```
                          Next.js frontend
           (text chat · voice UI · business admin dashboard)
@@ -84,19 +86,20 @@ FilingLens (existing project) already proves RAG + evaluation. VoxDesk adds what
 
 Each phase ends with something demoable and a commit.
 
-### Phase 0 — Setup
+### Phase 0 — Setup ✅
 - Repo, `CLAUDE.md`, docs, `.gitignore`, `.env.example`, README skeleton
 - `backend/`: FastAPI app with uv, `/health`, config via pydantic-settings, ruff, pytest
 - `frontend/`: Next.js app (TS, Tailwind) talking to `/health`
 - `docker-compose.yml`: Postgres+pgvector, Redis
 - GitHub Actions CI: ruff + pytest + frontend lint/build
 
-### Phase 1 — Text core + RAG
+### Phase 1 — Text core + RAG ✅
 - DB models: business, document, chunk (with vector + tsvector), conversation; Alembic migrations
 - Upload docs → parse → chunk → embed → store
 - Hybrid retrieval (pgvector + full-text, RRF)
 - LangGraph supervisor v1 with a RAG node; Postgres checkpointer
 - `/chat` endpoint with SSE streaming; Next.js chat page + doc upload page
+- *(Built: see `docs/PROGRESS.md` for details and `docs/interview/02–05` for explanations)*
 
 ### Phase 2 — MCP
 - `mcp_servers/voxdesk_mcp`: FastMCP server over streamable HTTP; tools for services, availability, book, reschedule, cancel; validation (no double booking, no past slots)
@@ -129,5 +132,6 @@ Twilio phone calls · GraphRAG (Neo4j) · Hindi/multilingual voice · outbound r
 
 - `docs/PLAN.md` (this file) — plan & decisions
 - `docs/PROGRESS.md` — running progress + decision log (updated every session)
+- `docs/ARCHITECTURE.md` — living architecture with Mermaid diagrams (renders on GitHub, importable into draw.io); updated every phase
 - `docs/interview/` — beginner-friendly interview notes, **one topic file per phase, written right after that phase** (index in `00_INDEX.md`).
 - **At the very end:** `docs/interview/PROJECT_EXPLAINED.md` (whole project end to end) `docs/interview/PITCH.md` (how to present it: 30s / 2min / 5min versions), and `docs/interview/SYSTEM_DESIGN.md` (HLD for system-design rounds: requirements, estimates, components, scaling, failures, trade-offs).
