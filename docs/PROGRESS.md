@@ -3,7 +3,7 @@
 > Update at the end of every work session: tick tasks, set "Next up", add decisions.
 
 ## Current status
-**Phase 0 — Setup** (code done; first commit + push pending)
+**Phase 0 — Setup ✅ done** · next: Phase 1
 
 ### Phase 0 done
 - [x] GitHub repo `yash6388/voxdesk` created, remote connected
@@ -14,11 +14,11 @@
 - [x] GitHub Actions CI (backend lint+test, frontend lint+build)
 
 ## Next up
-- [ ] First commit + push, confirm CI green
+- [x] First commit pushed, CI green
 - [ ] Phase 1: DB models + Alembic migrations (business, document, chunk, conversation)
 
 ## Phase checklist
-- [ ] Phase 0 — Setup
+- [x] Phase 0 — Setup
 - [ ] Phase 1 — Text core + RAG
 - [ ] Phase 2 — MCP
 - [ ] Phase 3 — A2A
@@ -35,3 +35,4 @@
 | 2026-10-17 | Build own MCP server + consume via adapters | Demonstrates both sides of MCP |
 | 2026-10-17 | Python 3.13 (not 3.12) | Already installed locally; 3.12 download stalled; all planned libs support 3.13 |
 | 2026-10-17 | Docker host ports 5433/6380 | Local Postgres/Redis already occupy 5432/6379 |
+| 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |
