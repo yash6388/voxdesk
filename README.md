@@ -167,8 +167,7 @@ voxdesk/
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — system diagrams, agent graphs, request flows, data model
-- [Design notes](docs/interview/00_INDEX.md) — how each part works and why it was built that way
+- [Architecture](docs/ARCHITECTURE.md) — system diagrams, agent graphs, request flows, data model and key design decisions
 
 ## Author
 

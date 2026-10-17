@@ -1,16 +1,12 @@
 # VoxDesk — Architecture
 
-> Living document — updated after every phase. Diagrams are [Mermaid](https://mermaid.js.org/):
-> GitHub renders them automatically, and draw.io can import them (see the last section).
->
-> **Status:** Phase 4 built — voice (local STT/TTS, pluggable ElevenLabs), supervisor + two A2A
-> specialist agents, RAG, MCP booking with human-in-the-loop. *Planned* = Phase 5.
+> How VoxDesk is built: system overview, deployment, components, agent graphs, request flows, data
+> model and key design decisions. Diagrams are [Mermaid](https://mermaid.js.org/) — GitHub renders
+> them automatically, and draw.io can import them (see the last section).
 
 ---
 
-## 1. System overview (target architecture)
-
-Solid = built, dashed = planned.
+## 1. System overview
 
 ```mermaid
 flowchart LR
@@ -18,13 +14,13 @@ flowchart LR
     owner(["Business owner<br/>dashboard"])
 
     subgraph FE["Frontend · Next.js"]
-        ui["Landing · Dashboard<br/>Playground · Knowledge<br/>Services · Bookings"]
+        ui["Landing · Dashboard · Playground<br/>Knowledge · Bookings · Inbox<br/>Analytics · Share · Widget"]
     end
 
     subgraph BE["API · FastAPI"]
         api["REST + SSE API"]
         voice["Voice WebSocket<br/>STT · TTS per sentence"]
-        sup["Supervisor graph<br/>route · small talk<br/>memory · confirm ⏸"]
+        sup["Supervisor graph<br/>route · small talk · handoff<br/>memory · confirm ⏸"]
     end
 
     subgraph AG["Specialist agents · A2A services"]
@@ -35,8 +31,8 @@ flowchart LR
     mcp["VoxDesk MCP server :8001<br/>7 booking tools"]
 
     subgraph DATA["Data"]
-        pg[("PostgreSQL 16 + pgvector<br/>businesses · documents · chunks<br/>services · hours · bookings<br/>checkpoints")]
-        redis[("Redis<br/>cache · rate limits")]
+        pg[("PostgreSQL 16 + pgvector<br/>businesses · documents · chunks<br/>services · hours · bookings<br/>conversations · turns · checkpoints")]
+        redis[("Redis<br/>rate limits")]
     end
 
     gemini["Google Gemini API<br/>chat · embeddings"]
@@ -57,29 +53,26 @@ flowchart LR
     sup --> gemini
     ka --> gemini
     ba --> gemini
-    api -.-> redis
-
-    classDef planned stroke-dasharray: 5 5
-    class redis planned
+    api --> redis
 ```
 
-| Component | Responsibility | Tech | Status |
-|---|---|---|---|
-| Frontend | Landing page; dashboard: businesses, knowledge base, services & hours, bookings, playground with agent inspector (A2A agent, MCP tools) + confirmation card | Next.js, TypeScript, Tailwind, Lucide | ✅ Phase 1–3 |
-| API | REST (businesses, documents, services, hours, bookings), SSE chat + resume | FastAPI, Pydantic | ✅ Phase 1–2 |
-| Supervisor graph | Routing + query rewrite, small talk, conversation memory, delegation over A2A, confirmation pause | LangGraph, Gemini, a2a-sdk client | ✅ Phase 3 |
-| Knowledge agent | A2A service: hybrid retrieval + grounded, streamed answer with sources | a2a-sdk, pgvector, Gemini | ✅ Phase 3 |
-| Booking agent | A2A service: booking graph (LLM + MCP tools + guardrails), own memory, `input-required` for confirmation | a2a-sdk, LangGraph, langchain-mcp-adapters | ✅ Phase 3 |
-| MCP server | Booking tools usable by any MCP client; auth + tenant headers | FastMCP (`mcp` SDK), Streamable HTTP | ✅ Phase 2 |
-| Booking domain | Availability, validation, booking rules shared by MCP + REST | SQLAlchemy, Postgres exclusion constraint | ✅ Phase 2 |
-| Voice | `/voice` WebSocket: speech → STT → supervisor → per-sentence TTS → audio; spoken confirmation; barge-in; latency metrics | faster-whisper + Kokoro (local, default) or ElevenLabs | ✅ Phase 4 |
-| PostgreSQL | System of record + vectors + checkpoints (supervisor and booking agent) | Postgres 16 + pgvector + btree_gist | ✅ |
-| Redis | Rate limiting (fixed-window counters) | Redis 7 | ✅ Phase 5 |
-| Tracing | One trace per turn across API + A2A agents (LLM calls, tools, retrieval, STT/TTS) | Langfuse (OpenTelemetry) | ✅ Phase 5 (needs keys) |
+| Component | Responsibility | Tech |
+|---|---|---|
+| Frontend | Landing page; dashboard: businesses, knowledge base, services & hours, bookings, Inbox, analytics, share page; playground with agent inspector; public customer page + embeddable widget | Next.js, TypeScript, Tailwind, Lucide |
+| API | Owner REST (auth, businesses, documents, services, hours, bookings, analytics, inbox), SSE chat + resume, guardrails, rate limits | FastAPI, Pydantic |
+| Supervisor graph | Routing + query rewrite, small talk, conversation memory, delegation over A2A, confirmation pause | LangGraph, Gemini, a2a-sdk client |
+| Knowledge agent | A2A service: hybrid retrieval + grounded, streamed answer with sources | a2a-sdk, pgvector, Gemini |
+| Booking agent | A2A service: booking graph (LLM + MCP tools + guardrails), own memory, `input-required` for confirmation | a2a-sdk, LangGraph, langchain-mcp-adapters |
+| MCP server | Booking tools usable by any MCP client; auth + tenant headers | FastMCP (`mcp` SDK), Streamable HTTP |
+| Booking domain | Availability, validation, booking rules shared by MCP + REST | SQLAlchemy, Postgres exclusion constraint |
+| Voice | `/voice` WebSocket: speech → STT → supervisor → per-sentence TTS → audio; spoken confirmation; barge-in; latency metrics | faster-whisper + Kokoro (local, default) or ElevenLabs |
+| PostgreSQL | System of record + vectors + checkpoints (supervisor and booking agent) | Postgres 16 + pgvector + btree_gist |
+| Redis | Rate limiting (fixed-window counters) | Redis 7 |
+| Tracing | One trace per turn across API + A2A agents (LLM calls, tools, retrieval, STT/TTS) | Langfuse (OpenTelemetry) |
 
 ---
 
-## 2. Current deployment (Phase 3, local)
+## 2. Deployment (local / Docker Compose)
 
 ```mermaid
 flowchart TB
@@ -421,9 +414,6 @@ LangGraph's checkpoint tables live in the same database and are managed by LangG
 
 ## 7. Key design decisions
 
-Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations in
-[`interview/`](interview/00_INDEX.md).
-
 | Decision | Why |
 |---|---|
 | Explicit LangGraph state machine | Predictable, testable control flow; checkpointing, streaming, interrupts built in |
@@ -463,7 +453,7 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 4. The result is editable shapes — drag to tidy the layout, recolour, add icons.
 5. Save as `docs/diagrams/voxdesk-architecture.drawio` and export a PNG for the README.
 
-**Drawing by hand (e.g. live in an interview)** — use the System overview (section 1), left to right:
+**Drawing by hand (e.g. on a whiteboard)** — use the System overview (section 1), left to right:
 
 1. **Clients** — customer (chat/voice), business owner.
 2. **Frontend** — Next.js.
