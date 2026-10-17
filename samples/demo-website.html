@@ -1,0 +1,46 @@
+<!doctype html>
+<!--
+  A pretend business website showing the VoxDesk widget as a real customer site would use it.
+  Serve it on a DIFFERENT origin than VoxDesk to see true cross-site embedding:
+
+      cd samples && python3 -m http.server 8090
+      open http://localhost:8090/demo-website.html
+
+  Change data-business to your business's slug (Dashboard → Share).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Glow Studio Salon — Koregaon Park, Pune</title>
+    <style>
+      body { margin: 0; font-family: Georgia, serif; color: #2b2118; background: #fbf7f2; }
+      header { padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; }
+      header b { font-size: 22px; letter-spacing: 1px; }
+      nav a { margin-left: 24px; color: #2b2118; text-decoration: none; font-family: system-ui; }
+      .hero { padding: 100px 40px; text-align: center; background: linear-gradient(#f3e7da, #fbf7f2); }
+      .hero h1 { font-size: 48px; margin: 0 0 16px; }
+      .hero p { font-family: system-ui; font-size: 18px; color: #6b5a4b; }
+      section { max-width: 900px; margin: 0 auto; padding: 40px; font-family: system-ui; line-height: 1.6; }
+      footer { text-align: center; padding: 40px; font-family: system-ui; color: #8a7a6b; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <b>GLOW STUDIO</b>
+      <nav><a href="#">Services</a><a href="#">Team</a><a href="#">Contact</a></nav>
+    </header>
+    <div class="hero">
+      <h1>Hair, skin &amp; nails in Koregaon Park</h1>
+      <p>Questions or want to book? Tap <b>Chat with us</b> in the corner — we reply instantly.</p>
+    </div>
+    <section>
+      <h2>Open Tuesday to Sunday</h2>
+      <p>14 Lane 5, Koregaon Park, Pune. Free basement parking for six cars.</p>
+    </section>
+    <footer>© Glow Studio Salon</footer>
+
+    <!-- ↓ The only line a business adds to its website -->
+    <script src="http://localhost:3000/widget.js" data-business="glow-studio-salon-ce8a" async></script>
+  </body>
+</html>

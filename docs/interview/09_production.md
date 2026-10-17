@@ -192,6 +192,33 @@ arguments are validated and grounded · the DB enforces invariants. Upgrade path
 
 ---
 
+## 8b. Distribution: Share page and embeddable widget
+
+How do real customers reach a business's agent? The owner shares it where customers already are:
+**Share page** → customer link (bios, Google profile, SMS), **QR code** (counter, posters — high error
+correction so small/scuffed prints still scan, PNG download), **website chat bubble**, **inline embed**.
+
+**The widget (`public/widget.js`)** — what a business pastes on its site:
+```html
+<script src="https://voxdesk.app/widget.js" data-business="glow-studio" async></script>
+```
+- Dependency-free, ~3 KB; adds a floating button; the chat itself loads **lazily** in an **iframe**
+  (`/c/<slug>?embed=1`) only on first open — no cost to the host page until used.
+- **Why an iframe?** Isolation both ways: the host page can't read the conversation, and our code
+  can't break the host page's styles/scripts. Same pattern as Intercom/Drift/Tidio.
+- Close button inside the iframe → `postMessage("voxdesk:close")`; the widget only accepts it from
+  **our origin** (checks `event.origin`).
+- Full-screen on phones; Escape closes; `allow="microphone"` ready for voice in the widget.
+
+**Clickjacking protection:** an attacker could load our dashboard invisibly in an iframe and trick an
+owner into clicking. So every page sends `X-Frame-Options: DENY` + `Content-Security-Policy:
+frame-ancestors 'none'` — **except `/c/*`**, the one page meant to be embedded (`frame-ancestors *`).
+Verified with real response headers.
+
+> "The widget is a one-line script that lazily injects an iframe, so the host site and the chat are
+> isolated from each other; and because only the customer page is frameable, the dashboard is
+> protected from clickjacking."
+
 ## 9. Testing (113 tests at the end of Step 4)
 | File | Proves |
 |---|---|
@@ -232,6 +259,11 @@ invariants.
 **Q: How do you debug a request that went through three services?**
 A: Langfuse distributed tracing — the trace id is propagated in A2A metadata, so the supervisor,
 agents, LLM calls and MCP tool calls appear as one timeline, with the model used and latency per step.
+
+**Q: How does a business put the assistant on its website?**
+A: One script tag; the script adds a chat bubble and lazily opens an iframe to our customer page, so
+the host page and the chat are isolated. Only that page is frameable — everything else sends
+frame-deny headers against clickjacking.
 
 **Q: Liveness vs readiness?**
 A: Liveness: is the process alive (restart if not). Readiness: can it serve traffic right now —

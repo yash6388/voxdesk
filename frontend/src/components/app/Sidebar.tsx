@@ -10,6 +10,7 @@ import {
   Menu,
   MessageSquare,
   Mic,
+  Share2,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +33,7 @@ function workspaceNav(businessId: string): NavItem[] {
     { label: "Services & hours", href: `${base}/services`, icon: Clock },
     { label: "Bookings", href: `${base}/bookings`, icon: CalendarDays },
     { label: "Voice", href: `${base}/voice`, icon: Mic },
+    { label: "Share", href: `${base}/share`, icon: Share2 },
     { label: "Analytics", icon: ChartColumn, soon: true },
   ];
 }

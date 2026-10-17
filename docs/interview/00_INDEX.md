@@ -81,6 +81,8 @@ Each file is written right after the phase it covers, while the details are fres
 | **Prompt injection** | User text that tries to override the assistant's instructions |
 | **Trace / span** | A trace is one request's timeline; spans are the steps inside it |
 | **Distributed tracing** | One trace that continues across several services/processes |
+| **Clickjacking** | Tricking users into clicking a hidden framed page — blocked with `frame-ancestors` / `X-Frame-Options` |
+| **Embeddable widget** | A script a website adds to show a chat bubble (here: an iframe to the customer page) |
 | **Golden dataset** | Hand-written test cases with known correct answers, used for evaluation |
 | **Hit@k** | Share of questions whose correct passage is in the top k results |
 | **MRR** | Mean Reciprocal Rank — average of 1/rank of the first correct result |

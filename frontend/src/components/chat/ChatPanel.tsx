@@ -40,11 +40,14 @@ export function ChatPanel({
   businessName,
   selectedId,
   onSelect,
+  showHeader = true,
 }: {
   businessId: string;
   businessName: string;
   selectedId: string | null;
   onSelect: (message: UIMessage | null) => void;
+  /** Hidden when the host (e.g. the website widget) draws its own header. */
+  showHeader?: boolean;
 }) {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -198,7 +201,12 @@ export function ChatPanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+      <div
+        className={cn(
+          "flex items-center justify-between border-b border-border px-5 py-3",
+          !showHeader && "hidden",
+        )}
+      >
         <div className="flex items-center gap-3">
           <BotAvatar />
           <div>
