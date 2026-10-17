@@ -25,6 +25,7 @@ from app.a2a.client import RemoteAgent
 from app.graph.common import HISTORY_WINDOW, conversation_view
 from app.graph.prompts import (
     BOOKING_UNAVAILABLE,
+    HANDOFF_REPLY,
     KNOWLEDGE_UNAVAILABLE,
     RESPOND_PROMPT,
     ROUTER_PROMPT,
@@ -124,8 +125,14 @@ def build_supervisor(
 
     async def route(state: ChatState) -> dict:
         decision = await classify(structured_router, state["business_name"], state["messages"])
+        intent = decision.intent
+        if intent == "handoff" and just_handed_off(state):
+            # Already flagged on the previous turn: the customer is replying to it (usually
+            # with their name and number). The router often still says "handoff" here, so
+            # this is enforced in code rather than trusted to the prompt (found in live testing).
+            intent = "smalltalk"
         return {
-            "intent": decision.intent,
+            "intent": intent,
             "search_query": decision.search_query,
             "pending_booking": None,
         }
@@ -181,8 +188,24 @@ def build_supervisor(
         )
         return finish(out)
 
+    async def handoff(state: ChatState) -> dict:
+        """The customer wants a person: tell them, and flag the conversation for staff
+        (the API records a `handoff` event → the conversation shows in the owner's Inbox)."""
+        write = get_stream_writer()
+        reply = HANDOFF_REPLY.format(business_name=state["business_name"])
+        write({"type": "handoff", "reason": state["messages"][-1].text[:300]})
+        write({"type": "token", "text": reply})
+        return {"messages": [AIMessage(reply)]}
+
+    def just_handed_off(state: ChatState) -> bool:
+        reply = HANDOFF_REPLY.format(business_name=state["business_name"])
+        previous = [m for m in state["messages"][:-1] if m.type == "ai"]
+        return bool(previous) and previous[-1].text == reply
+
     def after_route(state: ChatState) -> str:
-        return {"knowledge": "knowledge", "booking": "booking"}.get(state["intent"], "respond")
+        return {"knowledge": "knowledge", "booking": "booking", "handoff": "handoff"}.get(
+            state["intent"], "respond"
+        )
 
     def after_booking(state: ChatState) -> str:
         return "booking_confirm" if state.get("pending_booking") else END
@@ -193,9 +216,13 @@ def build_supervisor(
     graph.add_node("respond", respond)
     graph.add_node("booking", booking)
     graph.add_node("booking_confirm", booking_confirm)
+    graph.add_node("handoff", handoff)
 
     graph.add_edge(START, "route")
-    graph.add_conditional_edges("route", after_route, ["knowledge", "respond", "booking"])
+    graph.add_conditional_edges(
+        "route", after_route, ["knowledge", "respond", "booking", "handoff"]
+    )
+    graph.add_edge("handoff", END)
     graph.add_edge("knowledge", END)
     graph.add_edge("respond", END)
     graph.add_conditional_edges("booking", after_booking, ["booking_confirm", END])

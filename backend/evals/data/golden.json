@@ -1,0 +1,447 @@
+{
+  "documents": [
+    "glow-studio-salon.md",
+    "glow-studio-faq.md",
+    "glow-studio-aftercare.md",
+    "glow-studio-team.md"
+  ],
+  "retrieval": [
+    {
+      "question": "How much is a keratin treatment?",
+      "expect_any": [
+        "Keratin smoothing treatment: ₹6,500"
+      ]
+    },
+    {
+      "question": "Can I bring my car?",
+      "expect_any": [
+        "Free parking"
+      ]
+    },
+    {
+      "question": "What happens if I cancel on the same day?",
+      "expect_any": [
+        "Cancellations within 24 hours"
+      ]
+    },
+    {
+      "question": "Do you take UPI?",
+      "expect_any": [
+        "UPI"
+      ]
+    },
+    {
+      "question": "Are you open on Mondays?",
+      "expect_any": [
+        "Monday: Closed"
+      ]
+    },
+    {
+      "question": "How long should I wait before washing my hair after a keratin treatment?",
+      "expect_any": [
+        "72 hours"
+      ]
+    },
+    {
+      "question": "Can I wear makeup after a facial?",
+      "expect_any": [
+        "Avoid makeup for 12 hours"
+      ]
+    },
+    {
+      "question": "Who does balayage?",
+      "expect_any": [
+        "Rahul is our colour expert"
+      ]
+    },
+    {
+      "question": "Is there a discount for students?",
+      "expect_any": [
+        "Students get 10%"
+      ]
+    },
+    {
+      "question": "Do you come to my house?",
+      "expect_any": [
+        "do not offer home visits"
+      ]
+    },
+    {
+      "question": "What languages do your staff speak?",
+      "expect_any": [
+        "Marathi"
+      ]
+    },
+    {
+      "question": "Is the salon wheelchair accessible?",
+      "expect_any": [
+        "wheelchair accessible"
+      ]
+    },
+    {
+      "question": "Do I need a patch test before colouring my hair?",
+      "expect_any": [
+        "patch test"
+      ]
+    },
+    {
+      "question": "How do the loyalty points work?",
+      "expect_any": [
+        "Glow Point"
+      ]
+    },
+    {
+      "question": "Who should I see for a beard trim?",
+      "expect_any": [
+        "beard styling"
+      ]
+    },
+    {
+      "question": "How often should I get a root touch-up?",
+      "expect_any": [
+        "root touch-up"
+      ]
+    },
+    {
+      "question": "Can I just walk in on a Saturday?",
+      "expect_any": [
+        "Saturdays and Sundays we only take appointments",
+        "Weekends are appointment-only"
+      ]
+    },
+    {
+      "question": "What's the price for a men's haircut?",
+      "expect_any": [
+        "Men's haircut: ₹500"
+      ]
+    },
+    {
+      "question": "Do I have to pay a deposit for expensive services?",
+      "expect_any": [
+        "20% advance deposit"
+      ]
+    },
+    {
+      "question": "Do you have Wi-Fi?",
+      "expect_any": [
+        "Free Wi-Fi"
+      ]
+    },
+    {
+      "question": "Which days does Sneha work?",
+      "expect_any": [
+        "Sneha Patil"
+      ]
+    },
+    {
+      "question": "What should I avoid after waxing?",
+      "expect_any": [
+        "saunas"
+      ]
+    }
+  ],
+  "routing": [
+    {
+      "messages": [
+        [
+          "user",
+          "Hi there!"
+        ]
+      ],
+      "expect": "smalltalk"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Thanks so much, that's all!"
+        ]
+      ],
+      "expect": "smalltalk"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "good morning"
+        ]
+      ],
+      "expect": "smalltalk"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "How much is a hair spa?"
+        ]
+      ],
+      "expect": "knowledge"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Do you have parking?"
+        ]
+      ],
+      "expect": "knowledge"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Who is your colour specialist?"
+        ]
+      ],
+      "expect": "knowledge"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "What are your hours on Sunday?"
+        ]
+      ],
+      "expect": "knowledge"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "I'd like to book a facial on Friday"
+        ]
+      ],
+      "expect": "booking"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Can I reschedule my appointment?"
+        ]
+      ],
+      "expect": "booking"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Cancel my booking please"
+        ]
+      ],
+      "expect": "booking"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Is 4pm free tomorrow for a manicure?"
+        ]
+      ],
+      "expect": "booking"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "I want a haircut tomorrow"
+        ],
+        [
+          "assistant",
+          "Sure! What time suits you, and could I have your name and phone number?"
+        ],
+        [
+          "user",
+          "3pm, I'm Asha, 9876543210"
+        ]
+      ],
+      "expect": "booking"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "How much is a keratin treatment?"
+        ],
+        [
+          "assistant",
+          "A keratin smoothing treatment costs ₹6,500 [1]."
+        ],
+        [
+          "user",
+          "And how long does it take?"
+        ]
+      ],
+      "expect": "knowledge"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Can I speak to the manager please?"
+        ]
+      ],
+      "expect": "handoff"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "This is ridiculous, I was promised a callback two days ago and nobody called."
+        ]
+      ],
+      "expect": "handoff"
+    },
+    {
+      "messages": [
+        [
+          "user",
+          "Do you do eyelash extensions?"
+        ],
+        [
+          "assistant",
+          "I don't have information about eyelash extensions. Would you like me to connect you with our staff?"
+        ],
+        [
+          "user",
+          "Yes please"
+        ]
+      ],
+      "expect": "handoff"
+    }
+  ],
+  "answers": [
+    {
+      "question": "How much does a keratin treatment cost?",
+      "answerable": true,
+      "must_include": [
+        [
+          "6,500",
+          "6500"
+        ]
+      ]
+    },
+    {
+      "question": "What are your opening hours on Sunday?",
+      "answerable": true,
+      "must_include": [
+        [
+          "10"
+        ],
+        [
+          "6"
+        ]
+      ]
+    },
+    {
+      "question": "What happens if I cancel less than 24 hours before my appointment?",
+      "answerable": true,
+      "must_include": [
+        [
+          "50%",
+          "50 percent",
+          "half"
+        ]
+      ]
+    },
+    {
+      "question": "How long should I wait before washing my hair after keratin?",
+      "answerable": true,
+      "must_include": [
+        [
+          "72",
+          "three days",
+          "3 days"
+        ]
+      ]
+    },
+    {
+      "question": "Do students get a discount?",
+      "answerable": true,
+      "must_include": [
+        [
+          "10%",
+          "10 percent"
+        ]
+      ]
+    },
+    {
+      "question": "Is there parking?",
+      "answerable": true,
+      "must_include": [
+        [
+          "six",
+          "6"
+        ]
+      ]
+    },
+    {
+      "question": "Do you do tattoos?",
+      "answerable": false
+    },
+    {
+      "question": "Do you offer laser hair removal?",
+      "answerable": false
+    },
+    {
+      "question": "What is the Wi-Fi password?",
+      "answerable": true,
+      "must_include": [
+        [
+          "reception"
+        ]
+      ]
+    },
+    {
+      "question": "Do you offer eyelash extensions?",
+      "answerable": false
+    }
+  ],
+  "booking": [
+    {
+      "name": "complete request is booked (after confirmation)",
+      "message": "Book a men's haircut on {wednesday} at 3pm. I'm Asha Rao, 9876543210",
+      "expect": {
+        "books": true,
+        "service": "Men's haircut",
+        "date": "{wednesday_iso}",
+        "time": "15:00",
+        "name_contains": "Asha",
+        "phone_digits": "9876543210"
+      }
+    },
+    {
+      "name": "second service, different day",
+      "message": "I'd like a manicure on {thursday} at 10am please. Name Ravi Kumar, phone 91234 56789",
+      "expect": {
+        "books": true,
+        "service": "Manicure",
+        "date": "{thursday_iso}",
+        "time": "10:00",
+        "name_contains": "Ravi",
+        "phone_digits": "9123456789"
+      }
+    },
+    {
+      "name": "missing name and phone → asks instead of booking",
+      "message": "I want a men's haircut on {wednesday} at 3pm",
+      "expect": {
+        "books": false
+      }
+    },
+    {
+      "name": "requested time not free → doesn't book it",
+      "message": "Book a men's haircut on {wednesday} at 2pm. I'm Asha Rao, 9876543210",
+      "expect": {
+        "books": false
+      }
+    },
+    {
+      "name": "closed day → doesn't book",
+      "message": "Book a men's haircut on {monday} at 11am. I'm Asha Rao, 9876543210",
+      "expect": {
+        "books": false
+      }
+    }
+  ]
+}

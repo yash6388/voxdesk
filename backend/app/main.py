@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.a2a.client import A2AAgent
-from app.api import auth, booking, businesses, chat, documents, health, voice
+from app.api import auth, booking, businesses, chat, documents, health, insights, voice
 from app.config import get_settings
 from app.db.session import engine
 from app.graph.checkpoint import postgres_checkpointer
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(businesses.public_router)
     app.include_router(documents.router)
     app.include_router(booking.router)
+    app.include_router(insights.router)
     app.include_router(chat.router)
     app.include_router(voice.router)
     return app

@@ -3,7 +3,7 @@ from typing import Literal
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
 
-Intent = Literal["knowledge", "booking", "smalltalk"]
+Intent = Literal["knowledge", "booking", "smalltalk", "handoff"]
 
 
 class ChatState(MessagesState):
@@ -32,7 +32,10 @@ class Route(BaseModel):
             "booking: wants to book, reschedule, cancel or check an appointment, OR is "
             "continuing a booking conversation (choosing a service or time, giving their "
             "name or phone number, answering the assistant's booking question). "
-            "smalltalk: greetings, thanks, or anything else."
+            "handoff: wants a human — asks for staff/a person/the manager, is upset or "
+            "complaining, or says yes after the assistant offered to connect them with staff. "
+            "smalltalk: greetings, thanks, giving their name or phone number after the "
+            "assistant passed them to staff, or anything else."
         )
     )
     search_query: str = Field(

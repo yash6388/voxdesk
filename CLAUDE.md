@@ -22,6 +22,7 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - `backend/app/ratelimit.py` (Redis, fail-open) + `app/guardrails.py` (length + prompt-injection, before any LLM) — tests run with `RATE_LIMIT_ENABLED=false` except `test_protection.py`
 - `backend/app/tracing.py` — Langfuse (no-op without keys); `trace_turn` per chat/voice/agent turn, trace ids passed to agents in A2A metadata
 - `backend/evals/` — evaluation suite (`uv run python -m evals.run`): golden set, retrieval/routing/answers/booking, LLM judge; report in `evals/reports/latest.md`. Uses a temporary business, never real data. Not in CI (real API calls)
+- `backend/app/analytics.py` (`TurnRecorder`: derives each turn's outcome from the event stream → `conversations`/`turns` tables) + `app/api/insights.py` (owner Analytics + Inbox API; transcripts read from the LangGraph checkpoint). Handoff = 4th router intent → `needs_human`
 - `frontend/public/widget.js` + `/c/<slug>?embed=1` — embeddable chat bubble; `next.config.ts` frame-deny headers everywhere except `/c/*`
 - `backend/app/llm.py` — all chat models (Gemini behind a circuit breaker; OpenAI-compatible fallback — Groq/OpenRouter/HF — when `FALLBACK_API_KEY` is set; `LLM_PRIMARY=fallback` flips the order)
 - Postgres 16 + pgvector (app data, vectors, LangGraph checkpoints), Redis, Docker Compose

@@ -224,3 +224,69 @@ class Booking(TimestampMixin, Base):
             where=text("status = 'confirmed'"),
         ),
     )
+
+
+class ConversationStatus(enum.StrEnum):
+    OPEN = "open"
+    NEEDS_HUMAN = "needs_human"
+    RESOLVED = "resolved"
+
+
+class Conversation(TimestampMixin, Base):
+    """Queryable summary of a conversation (the full transcript lives in the LangGraph
+    checkpoint). Powers the Inbox and Analytics."""
+
+    __tablename__ = "conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), index=True
+    )
+    thread_id: Mapped[str] = mapped_column(String(100))
+    channel: Mapped[str] = mapped_column(String(20))  # "chat" | "voice"
+    status: Mapped[ConversationStatus] = mapped_column(
+        Enum(
+            ConversationStatus,
+            name="conversation_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        default=ConversationStatus.OPEN,
+    )
+    handoff_reason: Mapped[str | None] = mapped_column(Text)
+    turn_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    turns: Mapped[list["Turn"]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "thread_id", name="uq_conversations_thread"),
+        Index("ix_conversations_business_status", "business_id", "status"),
+    )
+
+
+class Turn(TimestampMixin, Base):
+    """One customer message and what happened (for analytics)."""
+
+    __tablename__ = "turns"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    business_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"))
+    intent: Mapped[str | None] = mapped_column(String(20))
+    # answered | booking_pending | booked | booking_declined | guardrail | handoff | error
+    outcome: Mapped[str] = mapped_column(String(30))
+    user_text: Mapped[str] = mapped_column(Text, default="")
+    reply_text: Mapped[str] = mapped_column(Text, default="")
+    first_token_ms: Mapped[int | None] = mapped_column(Integer)
+    total_ms: Mapped[int | None] = mapped_column(Integer)
+
+    conversation: Mapped[Conversation] = relationship(back_populates="turns")
+
+    # Analytics queries filter by business and time range.
+    __table_args__ = (Index("ix_turns_business_created", "business_id", "created_at"),)

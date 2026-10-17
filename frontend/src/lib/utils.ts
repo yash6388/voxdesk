@@ -42,3 +42,12 @@ export function formatDate(iso: string): string {
 export function formatMs(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`;
 }
+
+/** "just now", "5 min ago", "3 h ago", then a short date. */
+export function timeAgo(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 24 * 60) return `${Math.round(minutes / 60)} h ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}

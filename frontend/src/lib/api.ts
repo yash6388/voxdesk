@@ -63,9 +63,45 @@ export type VoxDocument = {
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
+export type ConversationStatus = "open" | "needs_human" | "resolved";
+
+/** One customer conversation (chat or voice), as recorded for the Inbox and Analytics. */
+export type Conversation = {
+  id: string;
+  thread_id: string;
+  channel: "chat" | "voice";
+  status: ConversationStatus;
+  handoff_reason: string | null;
+  turn_count: number;
+  created_at: string;
+  last_activity_at: string;
+  last_message: string | null;
+};
+export type ConversationDetail = Conversation & { messages: ChatMessage[] };
+
+export type Analytics = {
+  days: number;
+  conversations: number;
+  turns: number;
+  bookings: number;
+  handoffs: number;
+  guardrail_blocks: number;
+  errors: number;
+  needs_human_open: number;
+  outcomes: Record<string, number>;
+  intents: Record<string, number>;
+  channels: Record<string, number>;
+  daily: { date: string; turns: number; conversations: number }[];
+  first_token_p50_ms: number | null;
+  first_token_p95_ms: number | null;
+};
+
 export type Source = { filename: string; chunk_index: number; content: string; score: number };
 
-export type Route = { intent: "knowledge" | "booking" | "smalltalk"; search_query: string };
+export type Route = {
+  intent: "knowledge" | "booking" | "smalltalk" | "handoff";
+  search_query: string;
+};
 
 export type ToolCall = { name: string; args: Record<string, unknown> };
 /** Which specialist agent handled the turn over A2A, and the remote task's state. */
@@ -86,6 +122,7 @@ export type ChatEvent =
   | { event: "sources"; data: Source[] }
   | { event: "delegation"; data: Delegation }
   | { event: "guardrail"; data: { reason: "too_long" | "prompt_injection" } }
+  | { event: "handoff"; data: { reason: string } }
   | { event: "trace"; data: { url: string } }
   | { event: "tool_call"; data: ToolCall }
   | { event: "tool_result"; data: ToolResult }
@@ -192,6 +229,19 @@ export const listBookings = (businessId: string) =>
   request<Booking[]>(`/businesses/${businessId}/bookings`);
 export const cancelBookingAsOwner = (businessId: string, bookingId: string) =>
   request<Booking>(`/businesses/${businessId}/bookings/${bookingId}/cancel`, { method: "POST" });
+
+export const getAnalytics = (businessId: string, days: number) =>
+  request<Analytics>(`/businesses/${businessId}/analytics?days=${days}`);
+export const listConversations = (businessId: string, status?: ConversationStatus) =>
+  request<Conversation[]>(
+    `/businesses/${businessId}/conversations${status ? `?status=${status}` : ""}`,
+  );
+export const getConversation = (businessId: string, conversationId: string) =>
+  request<ConversationDetail>(`/businesses/${businessId}/conversations/${conversationId}`);
+export const resolveConversation = (businessId: string, conversationId: string) =>
+  request<Conversation>(`/businesses/${businessId}/conversations/${conversationId}/resolve`, {
+    method: "POST",
+  });
 
 /** POST /chat — send a customer message and stream the reply. */
 export const streamChat = (

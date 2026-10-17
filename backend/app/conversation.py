@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # output arrives through the "custom" stream instead.
 STREAMED_NODES = {"respond"}
 # Events relayed from remote agents (see graph/supervisor.py `delegate`).
-RELAYED = {"token", "sources", "tool_call", "tool_result", "delegation"}
+RELAYED = {"token", "sources", "tool_call", "tool_result", "delegation", "handoff"}
 
 Event = tuple[str, dict | list]
 
@@ -59,7 +59,8 @@ async def run_events(graph, graph_input, config: dict, thread_id: str) -> AsyncI
                 if kind == "token":
                     yield "token", {"text": payload["text"]}
                 elif kind in RELAYED:
-                    yield kind, payload.get("data", payload)
+                    data = {k: v for k, v in payload.items() if k != "type"}
+                    yield kind, payload.get("data", data)
             else:
                 for node, update in payload.items():
                     if node == "__interrupt__":

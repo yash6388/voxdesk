@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChartColumn,
   Clock,
+  Inbox,
   LogOut,
   Menu,
   MessageSquare,
@@ -19,22 +20,23 @@ import { useEffect, useState } from "react";
 
 import { BackendStatus } from "@/components/BackendStatus";
 import { Logo } from "@/components/Logo";
-import { type Business, getBusiness } from "@/lib/api";
+import { type Business, getBusiness, listConversations } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { avatarGradient, cn, initials } from "@/lib/utils";
 
-type NavItem = { label: string; href?: string; icon: React.ElementType; soon?: boolean };
+type NavItem = { label: string; href: string; icon: React.ElementType; badge?: number };
 
-function workspaceNav(businessId: string): NavItem[] {
+function workspaceNav(businessId: string, inboxCount: number): NavItem[] {
   const base = `/dashboard/b/${businessId}`;
   return [
     { label: "Playground", href: base, icon: MessageSquare },
+    { label: "Inbox", href: `${base}/inbox`, icon: Inbox, badge: inboxCount },
     { label: "Knowledge base", href: `${base}/knowledge`, icon: BookOpen },
     { label: "Services & hours", href: `${base}/services`, icon: Clock },
     { label: "Bookings", href: `${base}/bookings`, icon: CalendarDays },
     { label: "Voice", href: `${base}/voice`, icon: Mic },
     { label: "Share", href: `${base}/share`, icon: Share2 },
-    { label: "Analytics", icon: ChartColumn, soon: true },
+    { label: "Analytics", href: `${base}/analytics`, icon: ChartColumn },
   ];
 }
 
@@ -43,6 +45,7 @@ export function Sidebar() {
   const businessId = pathname.match(/^\/dashboard\/b\/([^/]+)/)?.[1];
   const [business, setBusiness] = useState<Business | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const inboxCount = useInboxCount(businessId);
 
   useEffect(() => {
     if (!businessId) return;
@@ -86,7 +89,7 @@ export function Sidebar() {
               </span>
             </div>
             <div className="space-y-1">
-              {workspaceNav(businessId).map((item) => (
+              {workspaceNav(businessId, inboxCount).map((item) => (
                 <NavLink key={item.label} item={item} active={item.href === pathname} />
               ))}
             </div>
@@ -169,33 +172,48 @@ function AccountMenu() {
   );
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
-  const { label, href, icon: Icon, soon } = item;
-  const className = cn(
-    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
-    active
-      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
-      : "text-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-800/60",
-    soon && "cursor-default opacity-60 hover:bg-transparent hover:text-muted",
-  );
+/** Conversations waiting for a human — polled, and refreshed when the Inbox resolves one. */
+function useInboxCount(businessId: string | undefined) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!businessId) return;
+    const load = () =>
+      listConversations(businessId, "needs_human")
+        .then((list) => setCount(list.length))
+        .catch(() => {});
+    load();
+    const timer = setInterval(load, 20000);
+    window.addEventListener("voxdesk:inbox", load);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("voxdesk:inbox", load);
+    };
+  }, [businessId]);
+  return count;
+}
 
-  const content = (
-    <>
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const { label, href, icon: Icon, badge } = item;
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
+        active
+          ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+          : "text-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-800/60",
+      )}
+    >
       <Icon className="size-4" />
       <span className="flex-1">{label}</span>
-      {soon && (
-        <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:bg-zinc-800">
-          Soon
+      {!!badge && (
+        <span
+          className="min-w-5 rounded-full bg-amber-100 px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+          aria-label={`${badge} waiting`}
+        >
+          {badge}
         </span>
       )}
-    </>
-  );
-
-  return href && !soon ? (
-    <Link href={href} className={className}>
-      {content}
     </Link>
-  ) : (
-    <div className={className}>{content}</div>
   );
 }

@@ -12,6 +12,8 @@ export type UIMessage = {
   traceUrl?: string;
   /** Set when an input guardrail blocked the message before any LLM saw it. */
   guardrail?: string;
+  /** Set when the agent flagged this conversation for a human (it appears in the Inbox). */
+  handoff?: string;
   /** The A2A agent this reply came from (latest state of its task). */
   delegation?: Delegation;
   /** MCP tool calls the booking agent made during this reply. */

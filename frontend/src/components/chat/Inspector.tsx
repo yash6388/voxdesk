@@ -12,6 +12,7 @@ import {
   Plug,
   Search,
   ShieldAlert,
+  UserRound,
 } from "lucide-react";
 
 import type { ToolStep, UIMessage } from "@/components/chat/types";
@@ -31,6 +32,11 @@ const INTENTS: Record<Route["intent"], { label: string; icon: React.ElementType;
     note: "Delegated to the Booking agent → MCP tools",
   },
   smalltalk: { label: "Small talk", icon: MessageSquare, note: "Answered by the supervisor itself" },
+  handoff: {
+    label: "Handoff",
+    icon: UserRound,
+    note: "Customer asked for a person → flagged for staff in the Inbox",
+  },
 };
 
 /** Shows how the agent handled one turn: routing decision, rewritten query, sources, latency. */
@@ -67,6 +73,15 @@ export function Inspector({ message }: { message: UIMessage | null }) {
               Open full trace in Langfuse
               <ExternalLink className="size-3.5" />
             </a>
+          )}
+
+          {message.handoff && (
+            <Section title="Handoff">
+              <div className="flex items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 text-xs dark:border-indigo-500/30 dark:bg-indigo-500/10">
+                <UserRound className="mt-0.5 size-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span>Flagged for a human. The conversation now waits in the Inbox.</span>
+              </div>
+            </Section>
           )}
 
           {message.guardrail && (

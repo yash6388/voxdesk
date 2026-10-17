@@ -77,6 +77,7 @@ async def db(_schema):
         await c.execute(
             text(
                 "TRUNCATE users, businesses, documents, chunks, services, business_hours, "
+                "conversations, turns, "
                 "bookings CASCADE"
             )
         )

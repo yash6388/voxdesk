@@ -57,8 +57,18 @@ class FakeSessionLocal:
         return BUSINESS if business_id == BUSINESS.id else None
 
 
+RECORDED: list[dict] = []
+
+
+async def fake_save(self, first_token_ms=None, total_ms=None):
+    """The test client runs its own event loop, so don't touch the real DB; capture instead."""
+    RECORDED.append({"outcome": self.outcome, "intent": self.intent, "channel": self.channel})
+
+
 def make_client(monkeypatch, stt, tts, *, routes, knowledge=None, booking=None) -> TestClient:
     monkeypatch.setattr(voice, "SessionLocal", FakeSessionLocal)
+    monkeypatch.setattr("app.analytics.TurnRecorder.save", fake_save)
+    RECORDED.clear()
     app = FastAPI()
     app.include_router(voice.router)
     app.state.graph = build_supervisor(
@@ -150,6 +160,9 @@ def test_booking_is_confirmed_by_saying_yes(monkeypatch):
 
     assert {"type": "decision", "approved": True} in second
     assert booking.requests[1]["data"] == {"approved": True}
+    # Analytics: first turn left a booking pending; the spoken "yes" completed it.
+    assert [r["outcome"] for r in RECORDED] == ["booking_pending", "answered"]
+    assert all(r["channel"] == "voice" for r in RECORDED)
     assert booking.requests[1]["task_id"] == "task-1"
     assert tts.spoken[-1] == "You're booked!"
 
@@ -213,5 +226,6 @@ def test_spoken_prompt_injection_is_refused_without_reaching_agents(monkeypatch)
         messages = turn(ws)
 
     assert {"type": "guardrail", "data": {"reason": "prompt_injection"}} in messages
+    assert RECORDED == [{"outcome": "guardrail", "intent": None, "channel": "voice"}]
     assert tts.spoken[0].startswith("I can only help with questions about Glow Studio")
     assert knowledge.requests == []

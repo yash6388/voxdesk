@@ -28,6 +28,7 @@ from contextlib import contextmanager
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
 
+from app.analytics import TurnRecorder
 from app.conversation import graph_config, pending_confirmation, run_events, turn_input
 from app.db.models import Business
 from app.db.session import SessionLocal
@@ -154,6 +155,9 @@ class VoiceSession:
             await self.send({"type": "guardrail", "data": {"reason": verdict.reason}})
             await self.speak(verdict.reply)
             await self.send({"type": "turn_end"})
+            recorder = self._recorder(text)
+            recorder.observe("guardrail", {"reason": verdict.reason})
+            await recorder.save()
             return
 
         if await pending_confirmation(self.graph, self.config):
@@ -165,10 +169,15 @@ class VoiceSession:
                 return
             await self.send({"type": "decision", "approved": decision})
             graph_input = Command(resume={"approved": decision})
+            recorder = self._recorder(text, declined=not decision)
         else:
             graph_input = turn_input(self.business, text)
+            recorder = self._recorder(text)
 
-        await self.respond(graph_input, started, timing, turn)
+        await self.respond(graph_input, started, timing, turn, recorder)
+
+    def _recorder(self, text: str, declined: bool = False) -> TurnRecorder:
+        return TurnRecorder(self.business.id, self.thread_id, "voice", text, declined=declined)
 
     async def answer(self, approved: bool) -> None:
         """Clicked Confirm/Decline on the card — same effect as saying yes/no."""
@@ -177,12 +186,22 @@ class VoiceSession:
         with self._trace("confirm") as turn:
             turn.input({"confirmation": "approved" if approved else "declined"})
             await self.send({"type": "decision", "approved": approved})
+            label = "(confirmed)" if approved else "(declined)"
             await self.respond(
-                Command(resume={"approved": approved}), time.perf_counter(), {}, turn
+                Command(resume={"approved": approved}),
+                time.perf_counter(),
+                {},
+                turn,
+                self._recorder(label, declined=not approved),
             )
 
     async def respond(
-        self, graph_input, started: float, timing: dict[str, float], turn: Turn
+        self,
+        graph_input,
+        started: float,
+        timing: dict[str, float],
+        turn: Turn,
+        recorder: TurnRecorder,
     ) -> None:
         """Stream the agent's reply; speak each sentence as soon as it's complete.
         A queue decouples the two: the LLM keeps generating while TTS works on the
@@ -198,14 +217,13 @@ class VoiceSession:
         # Created inside the turn's trace context, so its TTS spans nest under the turn.
         speaker_task = asyncio.create_task(speaker())
         splitter = SentenceSplitter()
-        reply: list[str] = []
         try:
             async for event, data in run_events(
                 self.graph, graph_input, turn.callbacks(self.config), self.thread_id
             ):
                 await self.send({"type": event, "data": data})
+                recorder.observe(event, data)
                 if event == "token":
-                    reply.append(data["text"])
                     timing.setdefault("first_token_ms", (time.perf_counter() - started) * 1000)
                     for sentence in splitter.feed(data["text"]):
                         await sentences.put(sentence)
@@ -226,7 +244,8 @@ class VoiceSession:
                 await speaker_task
 
         timing["total_ms"] = (time.perf_counter() - started) * 1000
-        turn.output("".join(reply))
+        turn.output(recorder.reply)
+        await recorder.save(timing.get("first_token_ms"), timing["total_ms"])
         await self.send({"type": "timing", **{k: round(v) for k, v in timing.items()}})
         await self.send({"type": "turn_end"})
 

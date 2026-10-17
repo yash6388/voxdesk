@@ -1,7 +1,7 @@
 # VoxDesk — Interview Question Bank
 
 > Practice sheet: cover the answer, say yours out loud, then compare. Each answer is short on
-> purpose — the topic files (01–10) have the depth. Answers use **real VoxDesk details and numbers**,
+> purpose — the topic files (01–11) have the depth. Answers use **real VoxDesk details and numbers**,
 > which is what makes them convincing.
 
 **Contents:** [Project](#a-the-project) · [Backend/FastAPI](#b-python--fastapi) ·
@@ -472,3 +472,31 @@ reported the controlled numbers.
 **100. How do you work with AI coding tools?**
 Use them to move fast, but own every decision: prototype unfamiliar SDKs first, read the actual API
 before writing code, verify with tests and live runs, and measure before claiming improvements.
+
+---
+
+## N. Analytics & human handoff
+
+**101. How do you record analytics for each conversation?**
+A recorder observes the same event stream the client receives (route, tokens, tool results, handoff,
+guardrail, error), derives one outcome per turn by priority, and saves it with one atomic upsert
+after the reply has streamed. Shared by chat and voice; failures never break the conversation.
+
+**102. What does the Analytics page show and how is it computed?**
+Conversations, bookings + conversion, handoffs, guardrail blocks, errors, time-to-first-word p50/p95
+(Postgres `percentile_cont`), daily messages in the business's timezone, and breakdowns by outcome,
+intent and channel — all SQL `GROUP BY` over the `turns` table, scoped to the owner's business.
+
+**103. How does human handoff work?**
+A 4th router intent. The handoff node sends a fixed reply ("I've let the team know…") and emits an
+event; the conversation is flagged `needs_human` and appears in the owner's Inbox with the
+transcript; staff follow up and mark it resolved.
+
+**104. A bug only live testing found?**
+After a handoff, the customer's reply with their contact details was routed to handoff again and got
+the same canned message. A prompt fix didn't hold; a deterministic rule in the route node did (no
+handoff right after a handoff reply) + a regression test.
+
+**105. Why not a chart library?**
+Three simple charts: hand-written SVG avoids ~100 KB of dependency, matches the design system, and the
+colours were validated for contrast in light and dark mode. A table view covers accessibility.

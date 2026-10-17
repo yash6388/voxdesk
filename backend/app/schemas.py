@@ -4,7 +4,7 @@ from zoneinfo import available_timezones
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
-from app.db.models import BookingStatus, DocumentStatus
+from app.db.models import BookingStatus, ConversationStatus, DocumentStatus
 
 
 class SignupRequest(BaseModel):
@@ -176,3 +176,44 @@ class BookingOut(BaseModel):
     end_at: datetime
     status: BookingStatus
     created_at: datetime
+
+
+class ConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    thread_id: str
+    channel: str
+    status: ConversationStatus
+    handoff_reason: str | None
+    turn_count: int
+    created_at: datetime
+    last_activity_at: datetime
+    last_message: str | None = None
+
+
+class ConversationDetail(ConversationOut):
+    messages: list[ChatMessage]
+
+
+class DailyPoint(BaseModel):
+    date: str
+    turns: int
+    conversations: int
+
+
+class AnalyticsOut(BaseModel):
+    days: int
+    conversations: int
+    turns: int
+    bookings: int
+    handoffs: int
+    guardrail_blocks: int
+    errors: int
+    needs_human_open: int
+    outcomes: dict[str, int]
+    intents: dict[str, int]
+    channels: dict[str, int]
+    daily: list[DailyPoint]
+    first_token_p50_ms: int | None
+    first_token_p95_ms: int | None

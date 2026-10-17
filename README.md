@@ -90,6 +90,11 @@ the Playground say *"Book a men's haircut tomorrow afternoon"*. The agent checks
 through the MCP server, asks for your name and phone, and shows a **confirmation card** before
 booking. Confirmed bookings appear on the **Bookings** page.
 
+**Handoff & Inbox:** tell the agent *"I'd like to speak to a person"* — it replies, asks for your
+contact details, and the conversation appears in the **Inbox** (sidebar badge) with its transcript
+until you mark it resolved. **Analytics** shows conversations, bookings, handoffs, guardrail blocks,
+errors, time-to-first-word p50/p95, messages per day and breakdowns by outcome, intent and channel.
+
 **Customer page & widget:** the **Share** page gives the public link (`/c/<slug>`), a downloadable
 **QR code**, and a one-line **website chat bubble**:
 `<script src="http://localhost:3000/widget.js" data-business="<slug>" async></script>`.

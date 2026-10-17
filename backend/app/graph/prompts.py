@@ -43,6 +43,11 @@ KNOWLEDGE_UNAVAILABLE = (
     "or I can pass your question to our staff."
 )
 
+HANDOFF_REPLY = (
+    "Of course — I've let the {business_name} team know, and someone will get back to you "
+    "soon. If you haven't already, please share your name and phone number so they can reach you."
+)
+
 BOOKING_UNAVAILABLE = (
     "Sorry, I can't reach our booking system right now. "
     "Please try again in a moment, or I can pass your request to our staff."

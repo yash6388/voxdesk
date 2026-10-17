@@ -1,4 +1,5 @@
 import json
+import time
 import uuid
 from collections.abc import AsyncIterator
 
@@ -6,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from langgraph.types import Command
 
+from app.analytics import TurnRecorder
 from app.api.businesses import get_business_or_404
 from app.api.deps import SessionDep
 from app.conversation import graph_config, pending_confirmation, run_events, turn_input
@@ -23,9 +25,18 @@ def sse(event: str, data: dict | list) -> str:
 
 
 async def stream_run(
-    graph, graph_input, config: dict, thread_id: str, *, business_id: str, trace_input
+    graph,
+    graph_input,
+    config: dict,
+    thread_id: str,
+    *,
+    business_id: str,
+    trace_input,
+    recorder: TurnRecorder,
 ) -> AsyncIterator[str]:
-    """One traced turn: the whole run (router, agents, tools, LLM calls) is one trace."""
+    """One traced, recorded turn: the whole run (router, agents, tools, LLM calls) is one
+    trace, and its outcome is saved for the Inbox/Analytics when it ends."""
+    started, first_token = time.perf_counter(), None
     with trace_turn(
         "chat-turn",
         session_id=config["configurable"]["thread_id"],
@@ -35,20 +46,28 @@ async def stream_run(
     ) as turn:
         if turn.trace_url:
             yield sse("trace", {"url": turn.trace_url})
-        reply = []
         async for event, data in run_events(graph, graph_input, turn.callbacks(config), thread_id):
-            if event == "token":
-                reply.append(data["text"])
+            if event == "token" and first_token is None:
+                first_token = (time.perf_counter() - started) * 1000
+            recorder.observe(event, data)
             yield sse(event, data)
-        turn.output("".join(reply))
+        turn.output(recorder.reply)
+    await recorder.save(first_token, (time.perf_counter() - started) * 1000)
 
 
-async def blocked_reply(thread_id: str, verdict: Verdict) -> AsyncIterator[str]:
+async def blocked_reply(
+    thread_id: str, verdict: Verdict, recorder: TurnRecorder
+) -> AsyncIterator[str]:
     """A guardrail stopped the message before any LLM saw it: answer politely instead."""
     yield sse("meta", {"thread_id": thread_id})
-    yield sse("guardrail", {"reason": verdict.reason})
-    yield sse("token", {"text": verdict.reply})
+    for event, data in [
+        ("guardrail", {"reason": verdict.reason}),
+        ("token", {"text": verdict.reply}),
+    ]:
+        recorder.observe(event, data)
+        yield sse(event, data)
     yield sse("done", {})
+    await recorder.save()
 
 
 def streaming_response(events: AsyncIterator[str]) -> StreamingResponse:
@@ -69,7 +88,8 @@ async def chat(body: ChatRequest, request: Request, session: SessionDep, limiter
     # Before any graph/checkpoint work: a blocked message should cost nothing.
     verdict = check_message(body.message, business.name)
     if not verdict.allowed:
-        return streaming_response(blocked_reply(thread_id, verdict))
+        recorder = TurnRecorder(business.id, thread_id, "chat", body.message)
+        return streaming_response(blocked_reply(thread_id, verdict, recorder))
 
     graph = request.app.state.graph
     config = graph_config(business.id, thread_id)
@@ -87,6 +107,7 @@ async def chat(body: ChatRequest, request: Request, session: SessionDep, limiter
             thread_id,
             business_id=str(business.id),
             trace_input=body.message,
+            recorder=TurnRecorder(business.id, thread_id, "chat", body.message),
         )
     )
 
@@ -111,6 +132,13 @@ async def resume(body: ChatResume, request: Request, session: SessionDep, limite
             body.thread_id,
             business_id=str(body.business_id),
             trace_input={"confirmation": "approved" if body.approved else "declined"},
+            recorder=TurnRecorder(
+                body.business_id,
+                body.thread_id,
+                "chat",
+                "(confirmed)" if body.approved else "(declined)",
+                declined=not body.approved,
+            ),
         )
     )
 

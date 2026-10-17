@@ -28,7 +28,8 @@ Each file is written right after the phase it covers, while the details are fres
 | 08 | [08_voice.md](08_voice.md) | Voice pipeline, local vs ElevenLabs, WebSocket, sentence-streaming TTS, spoken confirmation, barge-in, latency | ✅ Phase 4 |
 | 09 | [09_production.md](09_production.md) | LLM fallback + circuit breaker, health checks, Docker, auth & tenant isolation, rate limiting, guardrails, Langfuse distributed tracing | ✅ Phase 5 |
 | 10 | [10_evaluation.md](10_evaluation.md) | Evaluation suite: golden set, Hit@k/MRR, vector vs keyword vs hybrid, **chunk-size decision**, routing, LLM-as-judge faithfulness, refusals, agent task success, p50/p95, what the evals caught | ✅ Phase 5 |
-| ★ | [QA_BANK.md](QA_BANK.md) | **100 interview questions with short answers** across the whole project — practise sheet | ✅ |
+| 11 | [11_analytics_and_handoff.md](11_analytics_and_handoff.md) | Recording turns from the event stream, outcome derivation, upsert, analytics SQL (timezone days, percentiles), human handoff + Inbox, the repeat-handoff bug, hand-made SVG charts | ✅ Phase 5 |
+| ★ | [QA_BANK.md](QA_BANK.md) | **105 interview questions with short answers** across the whole project — practise sheet | ✅ |
 
 ## Final files (written at the end, once everything is built)
 
@@ -46,7 +47,7 @@ Each file is written right after the phase it covers, while the details are fres
 | **RAG** | Retrieval-Augmented Generation: find relevant text first, then let the LLM answer *from that text* |
 | **Embedding** | A list of numbers (a vector) representing the meaning of a text; similar meanings → nearby vectors |
 | **Vector DB / pgvector** | Storage that can find "nearest" vectors fast; pgvector adds this to PostgreSQL |
-| **Chunk** | A small piece of a document (~1000 characters) that gets embedded and retrieved |
+| **Chunk** | A small piece of a document (~500 characters, chosen by evals) that gets embedded and retrieved |
 | **Hybrid search** | Combining semantic (vector) search with keyword (full-text) search |
 | **RRF** | Reciprocal Rank Fusion — a simple formula to merge two ranked lists |
 | **HNSW** | The graph-based index pgvector uses for fast approximate nearest-neighbour search |
@@ -57,6 +58,8 @@ Each file is written right after the phase it covers, while the details are fres
 | **MCP** | Model Context Protocol — standard for AI apps to discover and call tools in a separate server |
 | **Tool call** | The LLM asking the app to run a named function with JSON arguments |
 | **Human-in-the-loop (HITL)** | The agent pauses and a person approves before an action runs |
+| **Human handoff** | The AI recognises it should pass the customer to a person and flags the conversation for staff |
+| **Upsert** | "Insert, or update if it already exists" in one atomic statement (`INSERT … ON CONFLICT DO UPDATE`) |
 | **interrupt()** | LangGraph function that checkpoints the graph and pauses it until resumed |
 | **Exclusion constraint** | Postgres rule that no two rows may "conflict" (here: overlapping time ranges) |
 | **Guardrail** | A code check that stops or corrects unsafe/invalid LLM output |

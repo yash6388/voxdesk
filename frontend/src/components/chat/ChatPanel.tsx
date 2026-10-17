@@ -116,6 +116,9 @@ export function ChatPanel({
           case "guardrail":
             patch((m) => ({ ...m, guardrail: ev.data.reason }));
             break;
+          case "handoff":
+            patch((m) => ({ ...m, handoff: ev.data.reason }));
+            break;
           case "delegation":
             patch((m) => ({ ...m, delegation: ev.data }));
             break;

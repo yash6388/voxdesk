@@ -219,6 +219,12 @@ Verified with real response headers.
 > isolated from each other; and because only the customer page is frameable, the dashboard is
 > protected from clickjacking."
 
+## 8c. Analytics and human handoff
+
+Covered in its own file: [`11_analytics_and_handoff.md`](11_analytics_and_handoff.md) — event-driven
+turn recording, atomic upserts, timezone-correct daily stats, p50/p95 in SQL, the handoff intent +
+Inbox, and the repeat-handoff bug found in live testing. (130 tests after Step 6.)
+
 ## 9. Testing (113 tests at the end of Step 4)
 | File | Proves |
 |---|---|

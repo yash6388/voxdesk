@@ -104,13 +104,16 @@ async def main(suites: list[str], chunk_sizes: list[int]) -> None:
     REPORTS.mkdir(exist_ok=True)
     markdown = render(results, meta)
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
-    for name in ("latest", f"eval-{stamp}"):
-        (REPORTS / f"{name}.md").write_text(markdown)
-    (REPORTS / "latest.json").write_text(
-        json.dumps({"meta": meta, "results": results}, indent=2, default=str)
-    )
+    (REPORTS / f"eval-{stamp}.md").write_text(markdown)
+    # Only a full run replaces "latest" — a single-suite run must not wipe the other sections.
+    full_run = set(suites) == set(ALL_SUITES)
+    if full_run:
+        (REPORTS / "latest.md").write_text(markdown)
+        (REPORTS / "latest.json").write_text(
+            json.dumps({"meta": meta, "results": results}, indent=2, default=str)
+        )
     print("\n" + markdown)
-    print(f"\nReport: {REPORTS / 'latest.md'}")
+    print(f"\nReport: {REPORTS / ('latest.md' if full_run else f'eval-{stamp}.md')}")
     await engine.dispose()
 
 

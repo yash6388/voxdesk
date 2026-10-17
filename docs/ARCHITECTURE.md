@@ -127,8 +127,10 @@ other by name, e.g. `http://knowledge:8101`).
 ```mermaid
 flowchart TB
     subgraph apiproc["API process"]
-        chat["api/chat.py<br/>SSE · resume · history"]
+        chat["api/chat.py · api/voice.py<br/>SSE · WebSocket"]
+        rec["analytics.py<br/>TurnRecorder"]
         rest["api/businesses · documents · booking"]
+        ins["api/insights.py<br/>analytics · inbox"]
         sup["graph/supervisor.py"]
         client["a2a/client.py<br/>A2AAgent"]
     end
@@ -148,6 +150,7 @@ flowchart TB
     shared["a2a/server.py · llm.py · security.py<br/>graph/checkpoint.py · db/"]
 
     chat --> sup --> client
+    chat -- "events" --> rec
     client -- A2A --> kexec
     client -- A2A --> bexec
     kexec --> ret
@@ -174,7 +177,9 @@ flowchart LR
     route -- knowledge --> k["knowledge<br/>delegate → Knowledge agent (A2A)"]
     route -- smalltalk --> respond["respond<br/>local LLM"]
     route -- booking --> b["booking<br/>delegate → Booking agent (A2A)"]
+    route -- handoff --> h["handoff<br/>reply + flag for staff (Inbox)"]
     k --> E((END))
+    h --> E
     respond --> E
     b -- completed --> E
     b -- "input-required" --> c{{"booking_confirm<br/>⏸ interrupt → reply on same A2A task"}}
@@ -322,6 +327,8 @@ erDiagram
     BUSINESSES ||--o{ BUSINESS_HOURS : "open on"
     BUSINESSES ||--o{ BOOKINGS : receives
     SERVICES ||--o{ BOOKINGS : "booked as"
+    BUSINESSES ||--o{ CONVERSATIONS : has
+    CONVERSATIONS ||--o{ TURNS : "made of"
 
     USERS {
         uuid id PK
@@ -378,10 +385,35 @@ erDiagram
         timestamptz end_at
         enum status "confirmed | cancelled"
     }
+    CONVERSATIONS {
+        uuid id PK
+        uuid business_id FK
+        string thread_id "unique per business = LangGraph thread"
+        string channel "chat | voice"
+        enum status "open | needs_human | resolved"
+        string handoff_reason
+        int turn_count
+        timestamptz last_activity_at
+    }
+    TURNS {
+        uuid id PK
+        uuid conversation_id FK
+        uuid business_id FK "indexed with created_at"
+        string intent "knowledge | booking | smalltalk | handoff"
+        string outcome "answered | booked | handoff | guardrail | error ..."
+        text user_text "preview"
+        text reply_text "preview"
+        int first_token_ms
+        int total_ms
+    }
 ```
 
 Key constraint: `bookings` has `EXCLUDE USING gist (business_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&) WHERE (status = 'confirmed')`
 — the database rejects overlapping confirmed bookings, even under concurrent requests.
+
+`conversations`/`turns` are written by `TurnRecorder` with one upsert per turn
+(`INSERT … ON CONFLICT (business_id, thread_id) DO UPDATE`); full transcripts are **not** copied —
+the Inbox reads them from the LangGraph checkpoint.
 
 LangGraph's checkpoint tables live in the same database and are managed by LangGraph, not Alembic.
 
@@ -416,6 +448,8 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 | Per-sentence TTS pipelined with LLM streaming | Caller hears the first sentence long before the answer is finished |
 | Chunk size 500/100 chosen by the evaluation suite | Hit@1 86% vs 82% at 1000 (equal overlap) |
 | LLM fallback: Gemini → any OpenAI-compatible provider (chat only, not embeddings) | Survive provider outages/quotas; embeddings must stay one model to remain comparable |
+| Analytics derived from the client event stream (`TurnRecorder`) | Same code for chat and voice; graph and agents know nothing about analytics |
+| Handoff = route → flag `needs_human` → Inbox; no repeat handoff (rule in code) | Real follow-up workflow without a live takeover console; router LLM was unreliable on follow-ups |
 | Decode audio with PyAV directly | faster-whisper's helper is incompatible with current PyAV; also format-agnostic |
 
 ---

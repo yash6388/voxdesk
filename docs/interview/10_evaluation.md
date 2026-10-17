@@ -36,7 +36,7 @@ run the REAL system (real embeddings, real LLMs)  ──►  score each output  
 | Suite | Cases | What a case contains |
 |---|---|---|
 | Retrieval | 22 | Question + phrase(s) the correct passage must contain |
-| Routing | 13 | Conversation (incl. 2 follow-ups needing history) + expected intent |
+| Routing | 16 | Conversation (incl. follow-ups needing history) + expected intent (knowledge / booking / smalltalk / handoff) |
 | Answers | 10 | Question + facts that must appear, or "unanswerable" (should refuse) |
 | Booking | 5 | Customer request + expected tool arguments, or "must NOT book" |
 
@@ -199,6 +199,14 @@ header-aware splitting. (Existing documents keep their old chunks until re-uploa
 **Accuracy 100%** (13/13), including both follow-ups that only make sense with history
 ("3pm, I'm Asha…" → booking; "And how long does it take?" → knowledge). Routing latency p50
 330–630 ms across runs.
+
+**Step 6 update — 4th intent `handoff`:** 3 cases added (asks for the manager; an angry complaint;
+"Yes please" after the assistant *offered* staff — needs history). Routing-only run
+(`reports/eval-20261018-0332.md`): **16/16 = 100%**, p50 499 ms, p95 1027 ms.
+What the golden set did **not** cover, and live testing found: the customer's reply *after* a
+handoff ("Sure, it's Priya, 98765…") was classified as handoff again. That case is now handled by a
+rule in code (see `11_analytics_and_handoff.md`) — a reminder that a golden set only measures what you
+thought to put in it; live testing keeps feeding it new cases.
 
 ### 5.3 Answers
 - **Faithfulness 5.00 / 5** — every answer fully supported by its context (judge found no

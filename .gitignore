@@ -28,3 +28,5 @@ next-env.d.ts
 # Local data
 *.log
 data/
+# …but the evaluation golden set is source, not local data
+!backend/evals/data/
