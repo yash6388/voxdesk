@@ -11,6 +11,9 @@ TEST_DATABASE_URL = os.environ.setdefault(
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 # Off by default so tests can make many requests; tests/test_protection.py turns it on.
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+# Never send test runs to a real Langfuse project (env vars override backend/.env).
+os.environ["LANGFUSE_PUBLIC_KEY"] = ""
+os.environ["LANGFUSE_SECRET_KEY"] = ""
 
 import asyncpg  # noqa: E402
 import pytest  # noqa: E402

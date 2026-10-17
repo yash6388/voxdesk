@@ -372,20 +372,22 @@ function TypingDots() {
 
 /** Render "[1]" markers in the answer as small citation chips. */
 function WithCitations({ text, sources }: { text: string; sources?: Source[] }) {
-  const parts = text.split(/(\[\d+\])/g);
+  // [1] and the full-width 【1】 some models (e.g. gpt-oss) use.
+  const parts = text.split(/(\[\d+\]|【\d+】)/g);
   return (
     <>
       {parts.map((part, i) => {
-        const match = part.match(/^\[(\d+)\]$/);
+        const match = part.match(/^(?:\[(\d+)\]|【(\d+)】)$/);
         if (!match) return <span key={i}>{part}</span>;
-        const source = sources?.[Number(match[1]) - 1];
+        const n = match[1] ?? match[2];
+        const source = sources?.[Number(n) - 1];
         return (
           <span
             key={i}
             title={source ? `${source.filename} · chunk ${source.chunk_index}` : undefined}
             className="mx-0.5 inline-flex h-4 min-w-4 -translate-y-px items-center justify-center rounded bg-indigo-100 px-1 align-middle text-[10px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"
           >
-            {match[1]}
+            {n}
           </span>
         );
       })}

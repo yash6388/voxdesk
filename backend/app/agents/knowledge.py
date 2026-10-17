@@ -16,13 +16,12 @@ from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import a2a_pb2 as pb
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.a2a.server import TextStream, agent_card, create_a2a_app, emit_data, start_task
 from app.config import get_settings
 from app.errors import friendly_error
-from app.graph.prompts import RESPOND_PROMPT
+from app.rag.answer import answer_messages
 from app.rag.embeddings import Embedder
 from app.rag.retrieval import hybrid_search
 from app.tracing import Turn, trace_turn
@@ -84,19 +83,13 @@ class KnowledgeAgentExecutor(AgentExecutor):
                 ],
             )
 
-            context_text = (
-                "\n\n".join(
-                    f"[{i}] (from {c.filename})\n{c.content}" for i, c in enumerate(chunks, start=1)
-                )
-                or "(no context retrieved)"
-            )
-            system = RESPOND_PROMPT.format(
-                business_name=meta.get("business_name", "the business"),
-                business_description=meta.get("business_description", ""),
-                context=context_text,
-            )
             answer = TextStream(updater)
-            messages = [SystemMessage(system), HumanMessage(question)]
+            messages = answer_messages(
+                question,
+                chunks,
+                meta.get("business_name", "the business"),
+                meta.get("business_description", ""),
+            )
             async for chunk in self._llm.astream(messages, config=turn.callbacks()):
                 await answer.write(chunk.text)
             turn.output(answer.text)

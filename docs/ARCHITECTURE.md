@@ -414,6 +414,7 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 | SSE for chat, WebSocket for voice | One-way token stream vs two-way audio + control stream |
 | Local STT/TTS by default, ElevenLabs by config | Free/private/no quotas for dev; best quality when needed; same interface |
 | Per-sentence TTS pipelined with LLM streaming | Caller hears the first sentence long before the answer is finished |
+| Chunk size 500/100 chosen by the evaluation suite | Hit@1 86% vs 82% at 1000 (equal overlap) |
 | LLM fallback: Gemini → any OpenAI-compatible provider (chat only, not embeddings) | Survive provider outages/quotas; embeddings must stay one model to remain comparable |
 | Decode audio with PyAV directly | faster-whisper's helper is incompatible with current PyAV; also format-agnostic |
 

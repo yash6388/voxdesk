@@ -26,7 +26,9 @@ Each file is written right after the phase it covers, while the details are fres
 | 06 | [06_mcp.md](06_mcp.md) | MCP server + client, tool design, tenant security, exclusion constraint, booking agent, human-in-the-loop, guardrails, live-test bugs | ✅ Phase 2 |
 | 07 | [07_a2a.md](07_a2a.md) | A2A protocol, Agent Cards, tasks/artifacts, MCP vs A2A, why split services, supervisor delegation, HITL over A2A, testing the protocol | ✅ Phase 3 |
 | 08 | [08_voice.md](08_voice.md) | Voice pipeline, local vs ElevenLabs, WebSocket, sentence-streaming TTS, spoken confirmation, barge-in, latency | ✅ Phase 4 |
-| 09 | `09_production.md` | Tracing, evals, auth, rate limiting, deployment | ⏳ Phase 5 |
+| 09 | [09_production.md](09_production.md) | LLM fallback + circuit breaker, health checks, Docker, auth & tenant isolation, rate limiting, guardrails, Langfuse distributed tracing | ✅ Phase 5 |
+| 10 | [10_evaluation.md](10_evaluation.md) | Evaluation suite: golden set, Hit@k/MRR, vector vs keyword vs hybrid, **chunk-size decision**, routing, LLM-as-judge faithfulness, refusals, agent task success, p50/p95, what the evals caught | ✅ Phase 5 |
+| ★ | [QA_BANK.md](QA_BANK.md) | **100 interview questions with short answers** across the whole project — practise sheet | ✅ |
 
 ## Final files (written at the end, once everything is built)
 
@@ -70,5 +72,22 @@ Each file is written right after the phase it covers, while the details are fres
 | **VAD** | Voice activity detection — detecting when someone starts/stops speaking |
 | **Time to first audio** | Delay until the caller hears the first word — the key voice latency metric |
 | **Quantisation (int8)** | Storing model weights in 8-bit integers: smaller, faster, tiny accuracy loss |
+| **Fallback (LLM)** | Automatically retrying a failed call on a different model/provider |
+| **Circuit breaker** | Stops calling a failing dependency for a while, then tests it again |
+| **Liveness / readiness** | "Is the process alive?" vs "can it serve traffic right now?" |
+| **JWT** | Signed token proving who the user is; verified without a database lookup |
+| **httpOnly cookie** | Cookie JavaScript can't read — protects sessions from XSS |
+| **Rate limiting** | Capping requests per IP/user/tenant per time window |
+| **Prompt injection** | User text that tries to override the assistant's instructions |
+| **Trace / span** | A trace is one request's timeline; spans are the steps inside it |
+| **Distributed tracing** | One trace that continues across several services/processes |
+| **Golden dataset** | Hand-written test cases with known correct answers, used for evaluation |
+| **Hit@k** | Share of questions whose correct passage is in the top k results |
+| **MRR** | Mean Reciprocal Rank — average of 1/rank of the first correct result |
+| **Precision@k / Recall@k** | Share of top-k that is relevant / share of all relevant items found |
+| **Faithfulness** | Every claim in an answer is supported by the retrieved context |
+| **LLM-as-judge** | Using an LLM with a rubric to grade outputs that can't be string-matched |
+| **p50 / p95** | Median latency / latency 95% of requests beat — typical vs slow-tail |
+| **Confounded experiment** | Changing two variables at once, so you can't tell which caused the effect |
 | **Migration** | A versioned script that changes the database schema (Alembic) |
 | **CI** | Continuous Integration — automatic lint + tests on every push (GitHub Actions) |

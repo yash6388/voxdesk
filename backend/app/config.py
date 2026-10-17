@@ -30,7 +30,12 @@ class Settings(BaseSettings):
     # --- Tracing (Langfuse Cloud or self-hosted; off when keys are empty) ---
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
-    langfuse_host: str = "https://cloud.langfuse.com"
+    # Langfuse's own snippet calls this LANGFUSE_BASE_URL; LANGFUSE_HOST is accepted too.
+    # EU: https://cloud.langfuse.com · US: https://us.cloud.langfuse.com
+    langfuse_host: str = Field(
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
+    )
 
     # --- Rate limits (requests per minute) ---
     rate_limit_enabled: bool = True
@@ -65,8 +70,10 @@ class Settings(BaseSettings):
     embedding_dim: int = 768
 
     # --- RAG ---
-    chunk_size: int = 1000
-    chunk_overlap: int = 150
+    # Chosen by the evaluation suite (same 100-char overlap): 500-char chunks gave hybrid
+    # Hit@1 86% / MRR 0.93 vs 82% / 0.90 at 1000 (and 73% at 1000 with 150 overlap).
+    chunk_size: int = 500
+    chunk_overlap: int = 100
     retrieval_top_k: int = 5
     retrieval_candidates: int = 20
     max_upload_mb: int = 10

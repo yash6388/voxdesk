@@ -109,6 +109,17 @@ With the backend running, open http://localhost:8000/docs and:
 3. `POST /businesses/{id}/search` — see hybrid retrieval with semantic + keyword ranks
 4. `POST /chat` — ask a question; the reply streams as Server-Sent Events
 
+## Evaluation
+
+```bash
+cd backend
+uv run python -m evals.run                      # all suites (uses real models)
+uv run python -m evals.run --suites retrieval   # retrieval only (embeddings, no chat LLM)
+```
+Latest results (`backend/evals/reports/latest.md`): hybrid retrieval **Hit@1 86% · MRR 0.93**,
+routing **100%**, answer faithfulness **5.0/5** (LLM-as-judge), correct refusals **100%**, booking-agent
+task success **100%**. The chunk size (500) was chosen from these results.
+
 ## Development
 
 ```bash

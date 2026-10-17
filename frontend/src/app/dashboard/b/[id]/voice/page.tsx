@@ -85,7 +85,7 @@ export default function VoicePage() {
                         <Bot className="size-4" />
                       </span>
                       <div className="max-w-[80%] rounded-2xl rounded-tl-md bg-zinc-100 px-4 py-2.5 text-sm leading-relaxed dark:bg-zinc-800/70">
-                        {m.text.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, "")}
+                        {m.text.replace(/\s*(?:\[\d+(?:,\s*\d+)*\]|【\d+(?:,\s*\d+)*】)/g, "")}
                         {m.error && <span className="text-red-600">{m.error}</span>}
                       </div>
                     </div>

@@ -1,0 +1,639 @@
+{
+  "meta": {
+    "started": "2026-10-18T03:03:13",
+    "duration_s": 194.40514893100044,
+    "models": "answers/agent: openai/gpt-oss-120b \u2192 gemini-2.5-flash \u00b7 router: gemini-2.5-flash-lite (+fallback) \u00b7 judge: openai/gpt-oss-120b \u00b7 embeddings: gemini-embedding-001",
+    "notes": "Latency on free-tier providers includes rate-limit waits (Groq's per-minute token cap); measured single-call model latency is ~0.3 s.",
+    "corpus": "4 sample documents \u00b7 22 retrieval, 13 routing, 10 answer, 5 booking cases"
+  },
+  "results": {
+    "retrieval": {
+      "500": {
+        "summary": {
+          "vector": {
+            "hit@1": 0.8181818181818182,
+            "hit@3": 0.9545454545454546,
+            "hit@5": 1.0,
+            "mrr": 0.8977272727272727
+          },
+          "keyword": {
+            "hit@1": 0.7727272727272727,
+            "hit@3": 0.9545454545454546,
+            "hit@5": 0.9545454545454546,
+            "mrr": 0.856060606060606
+          },
+          "hybrid": {
+            "hit@1": 0.8636363636363636,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr": 0.9318181818181818
+          }
+        },
+        "rows": [
+          {
+            "question": "How much is a keratin treatment?",
+            "hybrid": 2,
+            "vector": 2,
+            "keyword": 2
+          },
+          {
+            "question": "Can I bring my car?",
+            "hybrid": 1,
+            "vector": 4,
+            "keyword": 1
+          },
+          {
+            "question": "What happens if I cancel on the same day?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do you take UPI?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Are you open on Mondays?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "How long should I wait before washing my hair after a keratin treatment?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Can I wear makeup after a facial?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Who does balayage?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 2
+          },
+          {
+            "question": "Is there a discount for students?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do you come to my house?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": null
+          },
+          {
+            "question": "What languages do your staff speak?",
+            "hybrid": 2,
+            "vector": 2,
+            "keyword": 1
+          },
+          {
+            "question": "Is the salon wheelchair accessible?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do I need a patch test before colouring my hair?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 2
+          },
+          {
+            "question": "How do the loyalty points work?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Who should I see for a beard trim?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "How often should I get a root touch-up?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Can I just walk in on a Saturday?",
+            "hybrid": 2,
+            "vector": 2,
+            "keyword": 3
+          },
+          {
+            "question": "What's the price for a men's haircut?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do I have to pay a deposit for expensive services?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do you have Wi-Fi?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Which days does Sneha work?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "What should I avoid after waxing?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          }
+        ]
+      },
+      "1000": {
+        "summary": {
+          "vector": {
+            "hit@1": 0.6363636363636364,
+            "hit@3": 0.8636363636363636,
+            "hit@5": 0.9545454545454546,
+            "mrr": 0.7489177489177489
+          },
+          "keyword": {
+            "hit@1": 0.6363636363636364,
+            "hit@3": 0.9090909090909091,
+            "hit@5": 0.9545454545454546,
+            "mrr": 0.7840909090909091
+          },
+          "hybrid": {
+            "hit@1": 0.8181818181818182,
+            "hit@3": 0.9545454545454546,
+            "hit@5": 1.0,
+            "mrr": 0.8977272727272727
+          }
+        },
+        "rows": [
+          {
+            "question": "How much is a keratin treatment?",
+            "hybrid": 2,
+            "vector": 3,
+            "keyword": 2
+          },
+          {
+            "question": "Can I bring my car?",
+            "hybrid": 1,
+            "vector": 3,
+            "keyword": 1
+          },
+          {
+            "question": "What happens if I cancel on the same day?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do you take UPI?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 2
+          },
+          {
+            "question": "Are you open on Mondays?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "How long should I wait before washing my hair after a keratin treatment?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Can I wear makeup after a facial?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 2
+          },
+          {
+            "question": "Who does balayage?",
+            "hybrid": 2,
+            "vector": 3,
+            "keyword": 2
+          },
+          {
+            "question": "Is there a discount for students?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do you come to my house?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": null
+          },
+          {
+            "question": "What languages do your staff speak?",
+            "hybrid": 1,
+            "vector": 2,
+            "keyword": 1
+          },
+          {
+            "question": "Is the salon wheelchair accessible?",
+            "hybrid": 1,
+            "vector": 4,
+            "keyword": 1
+          },
+          {
+            "question": "Do I need a patch test before colouring my hair?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 2
+          },
+          {
+            "question": "How do the loyalty points work?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 2
+          },
+          {
+            "question": "Who should I see for a beard trim?",
+            "hybrid": 1,
+            "vector": 4,
+            "keyword": 1
+          },
+          {
+            "question": "How often should I get a root touch-up?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Can I just walk in on a Saturday?",
+            "hybrid": 4,
+            "vector": 7,
+            "keyword": 4
+          },
+          {
+            "question": "What's the price for a men's haircut?",
+            "hybrid": 2,
+            "vector": 3,
+            "keyword": 1
+          },
+          {
+            "question": "Do I have to pay a deposit for expensive services?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Do you have Wi-Fi?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "Which days does Sneha work?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          },
+          {
+            "question": "What should I avoid after waxing?",
+            "hybrid": 1,
+            "vector": 1,
+            "keyword": 1
+          }
+        ]
+      }
+    },
+    "routing": {
+      "summary": {
+        "accuracy": 1.0
+      },
+      "confusion": {
+        "booking \u2192 booking": 5,
+        "knowledge \u2192 knowledge": 5,
+        "smalltalk \u2192 smalltalk": 3
+      },
+      "rows": [
+        {
+          "message": "Hi there!",
+          "expected": "smalltalk",
+          "got": "smalltalk",
+          "ok": true
+        },
+        {
+          "message": "Thanks so much, that's all!",
+          "expected": "smalltalk",
+          "got": "smalltalk",
+          "ok": true
+        },
+        {
+          "message": "good morning",
+          "expected": "smalltalk",
+          "got": "smalltalk",
+          "ok": true
+        },
+        {
+          "message": "How much is a hair spa?",
+          "expected": "knowledge",
+          "got": "knowledge",
+          "ok": true
+        },
+        {
+          "message": "Do you have parking?",
+          "expected": "knowledge",
+          "got": "knowledge",
+          "ok": true
+        },
+        {
+          "message": "Who is your colour specialist?",
+          "expected": "knowledge",
+          "got": "knowledge",
+          "ok": true
+        },
+        {
+          "message": "What are your hours on Sunday?",
+          "expected": "knowledge",
+          "got": "knowledge",
+          "ok": true
+        },
+        {
+          "message": "I'd like to book a facial on Friday",
+          "expected": "booking",
+          "got": "booking",
+          "ok": true
+        },
+        {
+          "message": "Can I reschedule my appointment?",
+          "expected": "booking",
+          "got": "booking",
+          "ok": true
+        },
+        {
+          "message": "Cancel my booking please",
+          "expected": "booking",
+          "got": "booking",
+          "ok": true
+        },
+        {
+          "message": "Is 4pm free tomorrow for a manicure?",
+          "expected": "booking",
+          "got": "booking",
+          "ok": true
+        },
+        {
+          "message": "3pm, I'm Asha, 9876543210",
+          "expected": "booking",
+          "got": "booking",
+          "ok": true
+        },
+        {
+          "message": "And how long does it take?",
+          "expected": "knowledge",
+          "got": "knowledge",
+          "ok": true
+        }
+      ],
+      "latencies_ms": [
+        525.8,
+        552.7,
+        921.5,
+        613.6,
+        479.0,
+        650.7,
+        806.7,
+        727.4,
+        715.5,
+        392.6,
+        632.4,
+        308.6,
+        758.7
+      ]
+    },
+    "answers": {
+      "summary": {
+        "fact_accuracy": 1.0,
+        "mean_faithfulness": 5.0,
+        "faithful_rate (\u22654)": 1.0,
+        "correct_refusals": 1.0,
+        "errors": 0
+      },
+      "rows": [
+        {
+          "question": "How much does a keratin treatment cost?",
+          "answer": "A keratin smoothing treatment costs \u20b96,500.\u202f[2]",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer states the cost of a keratin smoothing treatment as \u20b96,500, which is directly given in the context [2]. No other factual claims are made, and the claim is fully supported.",
+          "ok": true
+        },
+        {
+          "question": "What are your opening hours on Sunday?",
+          "answer": "We\u2019re open on Sunday from 10:00\u202fAM to 6:00\u202fPM. [1]",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer states the opening hours on Sunday as 10:00\u202fAM to 6:00\u202fPM, which exactly matches the opening hours listed in the context. No unsupported claims are present.",
+          "ok": true
+        },
+        {
+          "question": "What happens if I cancel less than 24 hours before my appointment?",
+          "answer": "If you cancel within 24\u202fhours of your appointment, you\u2019ll be charged 50\u202f% of the service price\u202f[1].",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer states that cancelling within 24 hours incurs a charge of 50% of the service price, which is directly supported by the Cancellation Policy in context [1]. No other factual claims are made.",
+          "ok": true
+        },
+        {
+          "question": "How long should I wait before washing my hair after keratin?",
+          "answer": "You should wait\u202f72\u202fhours before washing your hair after a keratin smoothing treatment.\u202f[1]",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer states to wait 72 hours before washing hair after keratin, which is directly supported by the aftercare guide in context [1]. No other factual claims are made.",
+          "ok": true
+        },
+        {
+          "question": "Do students get a discount?",
+          "answer": "Yes\u2014students receive\u202f10% off haircuts from Tuesday to Thursday with a valid college ID (cannot be combined with other offers)\u30101\u3011.",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer states that students receive a 10% discount on haircuts from Tuesday to Thursday with a valid college ID and that it cannot be combined with other offers. This matches exactly the information provided in the context under the student discount FAQ. No unsupported claims are present.",
+          "ok": true
+        },
+        {
+          "question": "Is there parking?",
+          "answer": "Yes, we have free parking for up to 6 cars in the building\u2019s basement. [1]",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer states that free parking for up to 6 cars is available in the building basement, which is directly supported by the context in source [1]. No unsupported claims are present.",
+          "ok": true
+        },
+        {
+          "question": "Do you do tattoos?",
+          "answer": "I\u2019m sorry, I don\u2019t have information about tattoo services. Would you like me to connect you with a staff member for more details?",
+          "answerable": false,
+          "refused": true,
+          "ok": true
+        },
+        {
+          "question": "Do you offer laser hair removal?",
+          "answer": "I\u2019m sorry, I don\u2019t have information about laser hair removal. Would you like me to connect you with a staff member for details?",
+          "answerable": false,
+          "refused": true,
+          "ok": true
+        },
+        {
+          "question": "What is the Wi-Fi password?",
+          "answer": "I don\u2019t have the password on hand\u2014just ask at the reception and they\u2019ll give it to you.",
+          "answerable": true,
+          "facts_ok": true,
+          "faithfulness": 5,
+          "unsupported": [],
+          "judge_reason": "The answer only claims that the password is not known and advises asking reception for it. This matches the context, which states to ask reception for the Wi\u2011Fi password. No unsupported factual statements are made.",
+          "ok": true
+        },
+        {
+          "question": "Do you offer eyelash extensions?",
+          "answer": "I\u2019m sorry, I don\u2019t have information about eyelash extensions. Would you like me to connect you with a staff member for details?",
+          "answerable": false,
+          "refused": true,
+          "ok": true
+        }
+      ],
+      "latencies_ms": [
+        636.2,
+        604.2,
+        667.7,
+        626.5,
+        6368.0,
+        1466.6,
+        25349.9,
+        253.9,
+        697.3,
+        23986.4
+      ]
+    },
+    "booking": {
+      "summary": {
+        "task_success": 1.0,
+        "errors": 0
+      },
+      "rows": [
+        {
+          "case": "complete request is booked (after confirmation)",
+          "message": "Book a men's haircut on Wednesday 21 October at 3pm. I'm Asha Rao, 9876543210",
+          "tools_called": [
+            "list_services",
+            "check_availability"
+          ],
+          "booked": true,
+          "checks": {
+            "books": true,
+            "service": true,
+            "date": true,
+            "time": true,
+            "name": true,
+            "phone": true
+          },
+          "ok": true,
+          "reply": ""
+        },
+        {
+          "case": "second service, different day",
+          "message": "I'd like a manicure on Thursday 22 October at 10am please. Name Ravi Kumar, phone 91234 56789",
+          "tools_called": [
+            "list_services",
+            "check_availability"
+          ],
+          "booked": true,
+          "checks": {
+            "books": true,
+            "service": true,
+            "date": true,
+            "time": true,
+            "name": true,
+            "phone": true
+          },
+          "ok": true,
+          "reply": ""
+        },
+        {
+          "case": "missing name and phone \u2192 asks instead of booking",
+          "message": "I want a men's haircut on Wednesday 21 October at 3pm",
+          "tools_called": [
+            "list_services",
+            "check_availability"
+          ],
+          "booked": false,
+          "checks": {
+            "books": true
+          },
+          "ok": true,
+          "reply": "Sure! Could I have your name and phone number to complete the booking?"
+        },
+        {
+          "case": "requested time not free \u2192 doesn't book it",
+          "message": "Book a men's haircut on Wednesday 21 October at 2pm. I'm Asha Rao, 9876543210",
+          "tools_called": [
+            "list_services",
+            "check_availability"
+          ],
+          "booked": false,
+          "checks": {
+            "books": true
+          },
+          "ok": true,
+          "reply": "I\u2019m sorry, 2\u202fpm isn\u2019t open that day. The next available slots on\u202fWednesday\u202f21\u202fOct are 3\u202fpm, 4\u202fpm, 11\u202fam or 10\u202fam. Let me know which time works for you."
+        },
+        {
+          "case": "closed day \u2192 doesn't book",
+          "message": "Book a men's haircut on Monday 19 October at 11am. I'm Asha Rao, 9876543210",
+          "tools_called": [
+            "list_services",
+            "check_availability"
+          ],
+          "booked": false,
+          "checks": {
+            "books": true
+          },
+          "ok": true,
+          "reply": "I\u2019m sorry, there are no openings at 11\u202fam on Monday, 19\u202fOctober. Would you like to try a different time that day or look at another day?"
+        }
+      ],
+      "latencies_ms": [
+        1850.4,
+        14157.3,
+        19103.1,
+        33421.3,
+        1550.2
+      ]
+    }
+  }
+}

@@ -34,7 +34,8 @@ class SentenceSplitter:
         return [rest] if rest else []
 
 
-_CITATION = re.compile(r"\s*\[\d+(?:,\s*\d+)*\]")
+# [1], [1, 2] and the full-width 【1】 some models (e.g. gpt-oss) use.
+_CITATION = re.compile(r"\s*(?:\[\d+(?:,\s*\d+)*\]|【\d+(?:,\s*\d+)*】)")
 _MARKDOWN = re.compile(r"[*_#`>]+")
 _RUPEES = re.compile(r"₹\s?([\d,]+(?:\.\d+)?)")
 _INR = re.compile(r"\bINR\s?([\d,]+(?:\.\d+)?)")

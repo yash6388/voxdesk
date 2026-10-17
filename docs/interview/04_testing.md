@@ -2,6 +2,9 @@
 
 > Phase 1. How do you test an app whose core is a non-deterministic, paid, external LLM?
 >
+> **Phase 5 update:** **117 deterministic tests** (~8 s, real Postgres + Redis) plus a separate
+> **evaluation suite with real models** — see [`10_evaluation.md`](10_evaluation.md).
+>
 > **Phase 2 update:** now **39 tests** (~3 s). New: booking rules including a forced concurrent
 > double-booking race, MCP server tools + auth, and agent tests with a scripted tool-calling fake
 > LLM (approve / decline / guardrail / MCP down). Details in [`06_mcp.md`](06_mcp.md#9-testing-39-tests-total-phase-2-added-23).

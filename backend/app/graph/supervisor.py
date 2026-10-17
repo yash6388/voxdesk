@@ -87,6 +87,12 @@ async def delegate(agent: RemoteAgent, fallback: str, **request) -> Outcome:
     return out
 
 
+async def classify(structured_router, business_name: str, messages: list) -> Route:
+    """The router's decision for the latest message (shared with the evaluation suite)."""
+    system = SystemMessage(ROUTER_PROMPT.format(business_name=business_name))
+    return await structured_router.ainvoke([system, *conversation_view(messages)[-HISTORY_WINDOW:]])
+
+
 def build_supervisor(
     *,
     router_llm: BaseChatModel,
@@ -117,10 +123,7 @@ def build_supervisor(
         return update
 
     async def route(state: ChatState) -> dict:
-        system = SystemMessage(ROUTER_PROMPT.format(business_name=state["business_name"]))
-        decision: Route = await structured_router.ainvoke(
-            [system, *conversation_view(state["messages"])[-HISTORY_WINDOW:]]
-        )
+        decision = await classify(structured_router, state["business_name"], state["messages"])
         return {
             "intent": decision.intent,
             "search_query": decision.search_query,

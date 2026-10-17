@@ -34,6 +34,10 @@ def test_speakable_text():
     assert speakable("It costs ₹6,500 [1, 2] and **INR 1,200** for kids [3].") == (
         "It costs 6,500 rupees and 1,200 rupees for kids."
     )
+    # Full-width citations from some models (found by the eval suite) must not be read aloud.
+    assert speakable("The keratin treatment costs ₹6,500【2】.") == (
+        "The keratin treatment costs 6,500 rupees."
+    )
 
 
 @pytest.mark.parametrize(

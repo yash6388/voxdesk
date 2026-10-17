@@ -1,6 +1,11 @@
 # 02 — The RAG Pipeline: Ingestion, Embeddings, pgvector, Hybrid Search
 
 > Phase 1. This is the "knowledge" half of VoxDesk: how a business's documents become answers.
+>
+> **Phase 5 update:** chunk size is now **500 characters / 100 overlap** (was 1000/150), chosen by the
+> evaluation suite — hybrid Hit@1 86% vs 82%, MRR 0.93 vs 0.90 at equal overlap. Hybrid search was
+> also measured to beat vector-only and keyword-only. See [`10_evaluation.md`](10_evaluation.md).
+> Retrieval now lives in the Knowledge agent (Phase 3).
 
 ---
 

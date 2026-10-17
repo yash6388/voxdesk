@@ -1,5 +1,5 @@
 """Create (or update) the "Glow Studio Salon" demo business: services, opening hours,
-and the sample knowledge-base document. Safe to run repeatedly.
+and the sample knowledge-base documents (samples/glow-studio-*.md). Safe to run repeatedly.
 
     uv run python -m scripts.seed_demo
 """
@@ -18,7 +18,7 @@ from app.rag.embeddings import get_embedder
 from app.rag.ingestion import ingest_document
 
 NAME = "Glow Studio Salon"
-DOC = Path(__file__).resolve().parents[2] / "samples" / "glow-studio-salon.md"
+SAMPLES = Path(__file__).resolve().parents[2] / "samples"
 
 SERVICES = [  # (name, minutes, price ₹)
     ("Women's haircut & blow-dry", 60, 1200),
@@ -76,19 +76,22 @@ async def main() -> None:
         await set_hours(session, business.id, HOURS)
         print("Opening hours set (Tue–Sun)")
 
-        has_doc = await session.scalar(
-            select(Document.id).where(Document.business_id == business.id)
+        existing_docs = set(
+            await session.scalars(
+                select(Document.filename).where(Document.business_id == business.id)
+            )
         )
-        if has_doc is None:
+        for path in sorted(SAMPLES.glob("glow-studio-*.md")):
+            if path.name in existing_docs:
+                continue
             document = Document(
-                business_id=business.id, filename=DOC.name, content_type="text/markdown"
+                business_id=business.id, filename=path.name, content_type="text/markdown"
             )
             session.add(document)
             await session.commit()
-            await ingest_document(document.id, DOC.read_bytes(), SessionLocal, get_embedder())
-            print("Sample document ingested")
-        else:
-            print("Knowledge base already has documents")
+            await ingest_document(document.id, path.read_bytes(), SessionLocal, get_embedder())
+            print(f"Ingested {path.name}")
+        print(f"Knowledge base: {len(existing_docs)} existing document(s) kept")
 
     await engine.dispose()
 
