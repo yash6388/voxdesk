@@ -1,0 +1,29 @@
+[project]
+name = "voxdesk-backend"
+version = "0.1.0"
+description = "VoxDesk API — FastAPI gateway and LangGraph agents"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.143.3",
+    "pydantic-settings>=2.16.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

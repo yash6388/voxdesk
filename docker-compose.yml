@@ -1,0 +1,31 @@
+# Local infrastructure. Start with: docker compose up -d
+services:
+  postgres:
+    # Postgres 16 with the pgvector extension preinstalled
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-voxdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voxdesk}
+      POSTGRES_DB: ${POSTGRES_DB:-voxdesk}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-voxdesk} -d ${POSTGRES_DB:-voxdesk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_HOST_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
