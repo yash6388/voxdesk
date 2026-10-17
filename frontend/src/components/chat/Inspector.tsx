@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CircleCheck,
   CircleX,
+  ExternalLink,
   Gauge,
   LoaderCircle,
   MessageSquare,
@@ -55,6 +56,18 @@ export function Inspector({ message }: { message: UIMessage | null }) {
               </p>
             )}
           </Section>
+
+          {message.traceUrl && (
+            <a
+              href={message.traceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs font-medium transition hover:border-indigo-300 hover:text-indigo-700 dark:hover:border-indigo-500/50 dark:hover:text-indigo-300"
+            >
+              Open full trace in Langfuse
+              <ExternalLink className="size-3.5" />
+            </a>
+          )}
 
           {message.guardrail && (
             <Section title="Guardrail">

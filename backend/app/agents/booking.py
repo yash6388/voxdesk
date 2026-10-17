@@ -24,6 +24,7 @@ from langgraph.types import Command
 from app.a2a.server import TextStream, agent_card, create_a2a_app, emit_data, start_task
 from app.config import get_settings
 from app.errors import friendly_error
+from app.tracing import Turn, trace_turn
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,17 @@ class BookingAgentExecutor(AgentExecutor):
                 "business_timezone": meta.get("business_timezone", "UTC"),
             }
 
+        with trace_turn(
+            "booking-agent",
+            session_id=context.context_id,
+            user_id=meta["business_id"],
+            tags=["a2a", "booking"],
+            input=context.get_user_input() or data,
+            parent=meta,  # continue the supervisor's trace
+        ) as turn:
+            await self._run(graph_input, turn.callbacks(config), updater, turn)
+
+    async def _run(self, graph_input, config: dict, updater, turn: Turn) -> None:
         try:
             await updater.start_work()
             answer = TextStream(updater)
@@ -86,6 +98,7 @@ class BookingAgentExecutor(AgentExecutor):
             if pending:
                 await updater.requires_input(updater.new_agent_message([new_data_part(pending)]))
             else:
+                turn.output(answer.text)
                 await updater.complete(updater.new_agent_message([new_text_part(answer.text)]))
         except Exception as exc:
             logger.exception("Booking agent failed")

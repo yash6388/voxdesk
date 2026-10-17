@@ -107,6 +107,9 @@ export function ChatPanel({
           case "sources":
             patch((m) => ({ ...m, sources: ev.data }));
             break;
+          case "trace":
+            patch((m) => ({ ...m, traceUrl: ev.data.url }));
+            break;
           case "guardrail":
             patch((m) => ({ ...m, guardrail: ev.data.reason }));
             break;

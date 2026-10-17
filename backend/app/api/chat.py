@@ -12,6 +12,7 @@ from app.conversation import graph_config, pending_confirmation, run_events, tur
 from app.guardrails import Verdict, check_message
 from app.ratelimit import LimiterDep, chat_limits, client_ip
 from app.schemas import ChatHistory, ChatMessage, ChatRequest, ChatResume
+from app.tracing import trace_turn
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -21,9 +22,25 @@ def sse(event: str, data: dict | list) -> str:
     return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
 
 
-async def stream_run(graph, graph_input, config: dict, thread_id: str) -> AsyncIterator[str]:
-    async for event, data in run_events(graph, graph_input, config, thread_id):
-        yield sse(event, data)
+async def stream_run(
+    graph, graph_input, config: dict, thread_id: str, *, business_id: str, trace_input
+) -> AsyncIterator[str]:
+    """One traced turn: the whole run (router, agents, tools, LLM calls) is one trace."""
+    with trace_turn(
+        "chat-turn",
+        session_id=config["configurable"]["thread_id"],
+        user_id=business_id,
+        tags=["chat"],
+        input=trace_input,
+    ) as turn:
+        if turn.trace_url:
+            yield sse("trace", {"url": turn.trace_url})
+        reply = []
+        async for event, data in run_events(graph, graph_input, turn.callbacks(config), thread_id):
+            if event == "token":
+                reply.append(data["text"])
+            yield sse(event, data)
+        turn.output("".join(reply))
 
 
 async def blocked_reply(thread_id: str, verdict: Verdict) -> AsyncIterator[str]:
@@ -62,7 +79,16 @@ async def chat(body: ChatRequest, request: Request, session: SessionDep, limiter
         )
 
     inputs = turn_input(business, body.message)
-    return streaming_response(stream_run(graph, inputs, config, thread_id))
+    return streaming_response(
+        stream_run(
+            graph,
+            inputs,
+            config,
+            thread_id,
+            business_id=str(business.id),
+            trace_input=body.message,
+        )
+    )
 
 
 @router.post("/resume")
@@ -77,7 +103,16 @@ async def resume(body: ChatResume, request: Request, session: SessionDep, limite
         raise HTTPException(status.HTTP_409_CONFLICT, "Nothing is waiting for confirmation.")
 
     command = Command(resume={"approved": body.approved})
-    return streaming_response(stream_run(graph, command, config, body.thread_id))
+    return streaming_response(
+        stream_run(
+            graph,
+            command,
+            config,
+            body.thread_id,
+            business_id=str(body.business_id),
+            trace_input={"confirmation": "approved" if body.approved else "declined"},
+        )
+    )
 
 
 @router.get("/{business_id}/{thread_id}", response_model=ChatHistory)

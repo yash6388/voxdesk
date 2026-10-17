@@ -23,6 +23,7 @@ import json
 import logging
 import time
 import uuid
+from contextlib import contextmanager
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
@@ -33,6 +34,7 @@ from app.db.session import SessionLocal
 from app.errors import friendly_error
 from app.guardrails import check_message
 from app.ratelimit import RateLimiter, chat_limits, client_ip, get_rate_limiter
+from app.tracing import Turn, trace_turn
 from app.voice.providers import STT, TTS, get_stt, get_tts
 from app.voice.text import SentenceSplitter, speakable, spoken_decision
 
@@ -69,6 +71,7 @@ class VoiceSession:
         self.ws, self.graph, self.business = ws, graph, business
         self.thread_id, self.stt, self.tts = thread_id, stt, tts
         self.limiter = limiter
+        self._turn = Turn()  # the current turn's trace (no-op outside a turn / without keys)
         self.config = graph_config(business.id, thread_id)
         self._send_lock = asyncio.Lock()
         self._seq = 0
@@ -82,7 +85,8 @@ class VoiceSession:
         text = speakable(text)
         if not text:
             return None
-        speech = await self.tts.synthesize(text)
+        with self._turn.step("text-to-speech", input={"text": text, "engine": self.tts.name}):
+            speech = await self.tts.synthesize(text)
         self._seq += 1
         # Metadata and its binary frame are sent under one lock so they can't interleave.
         async with self._send_lock:
@@ -92,9 +96,30 @@ class VoiceSession:
             await self.ws.send_bytes(speech.audio)
         return time.perf_counter()
 
+    @contextmanager
+    def _trace(self, *tags: str):
+        """One trace per voice turn: STT, the agents' work and every TTS sentence nest in it."""
+        with trace_turn(
+            "voice-turn",
+            session_id=self.config["configurable"]["thread_id"],
+            user_id=str(self.business.id),
+            tags=["voice", *tags],
+        ) as turn:
+            self._turn = turn
+            try:
+                yield turn
+            finally:
+                self._turn = Turn()
+
     async def handle_turn(self, *, audio: bytes | None = None, text: str | None = None) -> None:
+        with self._trace() as turn:
+            await self._handle(turn, audio=audio, text=text)
+
+    async def _handle(self, turn: Turn, *, audio: bytes | None, text: str | None) -> None:
         started = time.perf_counter()
         timing: dict[str, float] = {}
+        if turn.trace_url:
+            await self.send({"type": "trace", "url": turn.trace_url})
 
         try:
             await self.limiter.enforce(*chat_limits(client_ip(self.ws), str(self.business.id)))
@@ -109,9 +134,15 @@ class VoiceSession:
             return
 
         if audio is not None:
-            text = await self.stt.transcribe(audio)
+            with turn.step(
+                "speech-to-text", input={"bytes": len(audio), "engine": self.stt.name}
+            ) as step:
+                text = await self.stt.transcribe(audio)
+                if step is not None:
+                    step.update(output=text)
             timing["stt_ms"] = (time.perf_counter() - started) * 1000
         text = (text or "").strip()
+        turn.input(text)
         await self.send({"type": "transcript", "text": text})
         if not text:
             await self.speak(NOT_HEARD)
@@ -137,16 +168,22 @@ class VoiceSession:
         else:
             graph_input = turn_input(self.business, text)
 
-        await self.respond(graph_input, started, timing)
+        await self.respond(graph_input, started, timing, turn)
 
     async def answer(self, approved: bool) -> None:
         """Clicked Confirm/Decline on the card — same effect as saying yes/no."""
         if not await pending_confirmation(self.graph, self.config):
             return
-        await self.send({"type": "decision", "approved": approved})
-        await self.respond(Command(resume={"approved": approved}), time.perf_counter(), {})
+        with self._trace("confirm") as turn:
+            turn.input({"confirmation": "approved" if approved else "declined"})
+            await self.send({"type": "decision", "approved": approved})
+            await self.respond(
+                Command(resume={"approved": approved}), time.perf_counter(), {}, turn
+            )
 
-    async def respond(self, graph_input, started: float, timing: dict[str, float]) -> None:
+    async def respond(
+        self, graph_input, started: float, timing: dict[str, float], turn: Turn
+    ) -> None:
         """Stream the agent's reply; speak each sentence as soon as it's complete.
         A queue decouples the two: the LLM keeps generating while TTS works on the
         previous sentence, so speech starts long before the answer is finished."""
@@ -158,14 +195,17 @@ class VoiceSession:
                 if sent_at and "first_audio_ms" not in timing:
                     timing["first_audio_ms"] = (sent_at - started) * 1000
 
+        # Created inside the turn's trace context, so its TTS spans nest under the turn.
         speaker_task = asyncio.create_task(speaker())
         splitter = SentenceSplitter()
+        reply: list[str] = []
         try:
             async for event, data in run_events(
-                self.graph, graph_input, self.config, self.thread_id
+                self.graph, graph_input, turn.callbacks(self.config), self.thread_id
             ):
                 await self.send({"type": event, "data": data})
                 if event == "token":
+                    reply.append(data["text"])
                     timing.setdefault("first_token_ms", (time.perf_counter() - started) * 1000)
                     for sentence in splitter.feed(data["text"]):
                         await sentences.put(sentence)
@@ -186,6 +226,7 @@ class VoiceSession:
                 await speaker_task
 
         timing["total_ms"] = (time.perf_counter() - started) * 1000
+        turn.output("".join(reply))
         await self.send({"type": "timing", **{k: round(v) for k, v in timing.items()}})
         await self.send({"type": "turn_end"})
 

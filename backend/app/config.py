@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     cookie_samesite: str = "lax"
     public_app_url: str = "http://localhost:3000"
 
+    # --- Tracing (Langfuse Cloud or self-hosted; off when keys are empty) ---
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
+
     # --- Rate limits (requests per minute) ---
     rate_limit_enabled: bool = True
     chat_limit_per_ip: int = 20

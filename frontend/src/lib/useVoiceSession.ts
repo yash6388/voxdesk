@@ -7,6 +7,7 @@ import { API_URL, type Confirmation, type Delegation, type Route } from "@/lib/a
 export type VoiceStatus = "connecting" | "idle" | "listening" | "thinking" | "speaking" | "offline";
 
 export type VoiceTiming = {
+  traceUrl?: string;
   stt_ms?: number;
   first_token_ms?: number;
   first_audio_ms?: number;
@@ -60,6 +61,7 @@ export function useVoiceSession(businessId: string) {
   const awaitingAudio = useRef(false);
   const turnOpen = useRef(false);
   const assistantId = useRef<string | null>(null);
+  const traceUrl = useRef<string | undefined>(undefined);
 
   // ---------- transcript helpers ----------
 
@@ -184,8 +186,12 @@ export function useVoiceSession(businessId: string) {
         case "audio":
           awaitingAudio.current = true; // the next binary frame is this sentence's audio
           break;
+        case "trace":
+          traceUrl.current = msg.url;
+          break;
         case "timing":
-          setTiming(msg);
+          setTiming({ ...msg, traceUrl: traceUrl.current });
+          traceUrl.current = undefined;
           break;
         case "turn_end":
         case "interrupted":

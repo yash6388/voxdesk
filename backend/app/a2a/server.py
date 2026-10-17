@@ -1,6 +1,7 @@
 """Helpers for exposing an agent as an A2A (Agent-to-Agent protocol) service."""
 
 import uuid
+from contextlib import asynccontextmanager
 
 from a2a.helpers.proto_helpers import new_data_part, new_task_from_user_message, new_text_part
 from a2a.server.agent_execution import AgentExecutor, RequestContext
@@ -13,6 +14,7 @@ from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH
 from starlette.applications import Starlette
 
 from app.security import BearerKeyMiddleware
+from app.tracing import flush as flush_traces
 
 
 def agent_card(
@@ -43,6 +45,17 @@ def create_a2a_app(
     executor: AgentExecutor, card: pb.AgentCard, api_key: str, lifespan=None
 ) -> Starlette:
     """JSON-RPC A2A endpoint at `/` (bearer-key protected) + public Agent Card."""
+
+    @asynccontextmanager
+    async def with_flush(app):
+        # Send buffered traces before the agent process exits.
+        if lifespan is None:
+            yield
+        else:
+            async with lifespan(app):
+                yield
+        flush_traces()
+
     handler = DefaultRequestHandler(
         agent_executor=executor,
         # Task state (e.g. "input-required") lives in memory: fine for one replica.
@@ -52,7 +65,7 @@ def create_a2a_app(
     )
     app = Starlette(
         routes=[*create_agent_card_routes(card), *create_jsonrpc_routes(handler, rpc_url="/")],
-        lifespan=lifespan,
+        lifespan=with_flush,
     )
     app.add_middleware(
         BearerKeyMiddleware, key=api_key, public_paths=frozenset({AGENT_CARD_WELL_KNOWN_PATH})

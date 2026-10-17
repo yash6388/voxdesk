@@ -25,6 +25,7 @@ from app.errors import friendly_error
 from app.graph.prompts import RESPOND_PROMPT
 from app.rag.embeddings import Embedder
 from app.rag.retrieval import hybrid_search
+from app.tracing import Turn, trace_turn
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +50,26 @@ class KnowledgeAgentExecutor(AgentExecutor):
             )
             return
 
+        with trace_turn(
+            "knowledge-agent",
+            session_id=context.context_id,
+            user_id=meta["business_id"],
+            tags=["a2a", "knowledge"],
+            input=question,
+            parent=meta,  # continue the supervisor's trace
+        ) as turn:
+            await self._answer(question, meta, updater, turn)
+
+    async def _answer(self, question: str, meta: dict, updater, turn: Turn) -> None:
         try:
             await updater.start_work()
-            async with self._sessions() as session:
-                chunks = await hybrid_search(
-                    session, self._embedder, uuid.UUID(meta["business_id"]), question
-                )
+            with turn.step("hybrid-search", as_type="retriever", input=question) as step:
+                async with self._sessions() as session:
+                    chunks = await hybrid_search(
+                        session, self._embedder, uuid.UUID(meta["business_id"]), question
+                    )
+                if step is not None:
+                    step.update(output=[{"chunk": c.chunk_index, "score": c.score} for c in chunks])
             await emit_data(
                 updater,
                 "sources",
@@ -81,8 +96,10 @@ class KnowledgeAgentExecutor(AgentExecutor):
                 context=context_text,
             )
             answer = TextStream(updater)
-            async for chunk in self._llm.astream([SystemMessage(system), HumanMessage(question)]):
+            messages = [SystemMessage(system), HumanMessage(question)]
+            async for chunk in self._llm.astream(messages, config=turn.callbacks()):
                 await answer.write(chunk.text)
+            turn.output(answer.text)
             await updater.complete(updater.new_agent_message([new_text_part(answer.text)]))
         except Exception as exc:
             logger.exception("Knowledge agent failed")

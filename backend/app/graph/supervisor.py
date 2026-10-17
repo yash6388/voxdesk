@@ -30,6 +30,7 @@ from app.graph.prompts import (
     ROUTER_PROMPT,
 )
 from app.graph.state import ChatState, Route
+from app.tracing import trace_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,8 @@ async def delegate(agent: RemoteAgent, fallback: str, **request) -> Outcome:
     """Send one message to a remote agent and relay its stream to the client as it arrives
     (tokens, sources, tool calls) via LangGraph's custom stream."""
     write = get_stream_writer()
+    # Continue this trace inside the remote agent (distributed tracing over A2A).
+    request["metadata"] = {**request["metadata"], **trace_metadata()}
     out, chunks, task_id, state = Outcome(), [], "", "failed"
     try:
         async for ev in agent.stream(**request):

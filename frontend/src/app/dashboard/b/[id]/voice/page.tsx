@@ -1,6 +1,16 @@
 "use client";
 
-import { AudioLines, Bot, Gauge, Keyboard, Mic, RotateCcw, Send, Square } from "lucide-react";
+import {
+  AudioLines,
+  Bot,
+  ExternalLink,
+  Gauge,
+  Keyboard,
+  Mic,
+  RotateCcw,
+  Send,
+  Square,
+} from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -234,6 +244,16 @@ function LatencyCard({ timing }: { timing: VoiceTiming | null }) {
           </li>
         ))}
       </ul>
+      {timing?.traceUrl && (
+        <a
+          href={timing.traceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs font-medium transition hover:border-indigo-300 hover:text-indigo-700 dark:hover:border-indigo-500/50 dark:hover:text-indigo-300"
+        >
+          Open trace in Langfuse <ExternalLink className="size-3.5" />
+        </a>
+      )}
     </Card>
   );
 }

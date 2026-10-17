@@ -74,7 +74,8 @@ flowchart LR
 | Booking domain | Availability, validation, booking rules shared by MCP + REST | SQLAlchemy, Postgres exclusion constraint | ✅ Phase 2 |
 | Voice | `/voice` WebSocket: speech → STT → supervisor → per-sentence TTS → audio; spoken confirmation; barge-in; latency metrics | faster-whisper + Kokoro (local, default) or ElevenLabs | ✅ Phase 4 |
 | PostgreSQL | System of record + vectors + checkpoints (supervisor and booking agent) | Postgres 16 + pgvector + btree_gist | ✅ |
-| Redis | Cache, rate limiting, pub/sub | Redis 7 | Running, used from Phase 5 |
+| Redis | Rate limiting (fixed-window counters) | Redis 7 | ✅ Phase 5 |
+| Tracing | One trace per turn across API + A2A agents (LLM calls, tools, retrieval, STT/TTS) | Langfuse (OpenTelemetry) | ✅ Phase 5 (needs keys) |
 
 ---
 
@@ -409,6 +410,7 @@ Full list with dates in [`PROGRESS.md`](PROGRESS.md#decision-log); explanations 
 | Agent Card public, JSON-RPC bearer-protected | Discovery is the point of a card; calling needs credentials |
 | Owner auth: JWT in httpOnly cookie; owner-only routers return 404 for other tenants | XSS-safe sessions, tenant isolation, no id enumeration |
 | Public customer page by slug; chat/voice endpoints public | Customers never need an account |
+| Langfuse tracing with trace ids passed over A2A | Debug a multi-agent, multi-process turn as one timeline |
 | SSE for chat, WebSocket for voice | One-way token stream vs two-way audio + control stream |
 | Local STT/TTS by default, ElevenLabs by config | Free/private/no quotas for dev; best quality when needed; same interface |
 | Per-sentence TTS pipelined with LLM streaming | Caller hears the first sentence long before the answer is finished |

@@ -86,6 +86,7 @@ export type ChatEvent =
   | { event: "sources"; data: Source[] }
   | { event: "delegation"; data: Delegation }
   | { event: "guardrail"; data: { reason: "too_long" | "prompt_injection" } }
+  | { event: "trace"; data: { url: string } }
   | { event: "tool_call"; data: ToolCall }
   | { event: "tool_result"; data: ToolResult }
   | { event: "confirm"; data: Confirmation }

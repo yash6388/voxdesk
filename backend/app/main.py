@@ -12,6 +12,7 @@ from app.db.session import engine
 from app.graph.checkpoint import postgres_checkpointer
 from app.graph.supervisor import build_supervisor
 from app.llm import chat_llm, router_llm
+from app.tracing import flush as flush_traces
 from app.voice.providers import warm_up_voice
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
         )
         yield
     warmup.cancel()
+    flush_traces()
     await knowledge.aclose()
     await booking_agent.aclose()
     await engine.dispose()
