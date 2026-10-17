@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     fallback_base_url: str = "https://router.huggingface.co/v1"
     # Must support tool calling (the booking agent uses tools).
     fallback_model: str = "meta-llama/Llama-3.3-70B-Instruct"
+    # "gemini" = Gemini first, fallback on failure; "fallback" = fallback model first,
+    # Gemini as backup (handy while Gemini's free quota is exhausted).
+    llm_primary: str = "gemini"
+    # Circuit breaker on Gemini: after N outage errors in a row, skip it for the cooldown.
+    breaker_failure_threshold: int = 3
+    breaker_cooldown_seconds: float = 300
     embedding_dim: int = 768
 
     # --- RAG ---

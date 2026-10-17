@@ -14,7 +14,13 @@ from langchain_core.runnables import Runnable
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
+from app.circuit_breaker import CircuitBreakerMixin
 from app.config import get_settings
+
+
+class GuardedGemini(CircuitBreakerMixin, ChatGoogleGenerativeAI):
+    """Gemini behind a circuit breaker: once it's clearly out of quota, calls fail
+    instantly so the fallback answers without waiting for another 429."""
 
 
 class FallbackChatModel(ChatOpenAI):
@@ -29,6 +35,14 @@ class FallbackChatModel(ChatOpenAI):
 
 def with_fallback(primary: BaseChatModel, fallback: BaseChatModel | None) -> Runnable:
     return primary.with_fallbacks([fallback]) if fallback is not None else primary
+
+
+def _ordered(gemini: BaseChatModel, fallback: BaseChatModel | None) -> Runnable:
+    """LLM_PRIMARY=fallback flips the order: the fallback provider answers first and
+    Gemini becomes the backup."""
+    if fallback is not None and get_settings().llm_primary == "fallback":
+        return with_fallback(fallback, gemini)
+    return with_fallback(gemini, fallback)
 
 
 def _fallback_model(temperature: float) -> BaseChatModel | None:
@@ -55,25 +69,25 @@ def chat_llm() -> Runnable:
     """Model for customer-facing answers and the booking agent."""
     s = get_settings()
     fallback = _fallback_model(0.3)
-    primary = ChatGoogleGenerativeAI(
+    primary = GuardedGemini(
         model=s.chat_model,
         google_api_key=s.google_api_key,
         temperature=0.3,
         thinking_budget=0,  # no "thinking" pass: lower latency for chat/voice
         max_retries=_primary_retries(fallback),
     )
-    return with_fallback(primary, fallback)
+    return _ordered(primary, fallback)
 
 
 def router_llm() -> Runnable:
     """Small, fast model for intent classification and query rewriting."""
     s = get_settings()
     fallback = _fallback_model(0)
-    primary = ChatGoogleGenerativeAI(
+    primary = GuardedGemini(
         model=s.router_model,
         google_api_key=s.google_api_key,
         temperature=0,
         thinking_budget=0,
         max_retries=_primary_retries(fallback),
     )
-    return with_fallback(primary, fallback)
+    return _ordered(primary, fallback)

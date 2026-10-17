@@ -7,6 +7,21 @@ def is_rate_limited(exc: BaseException | None) -> bool:
     return False
 
 
+def is_provider_outage(exc: BaseException | None) -> bool:
+    """Errors that mean "the provider can't serve us right now" — rate limits, 5xx, timeouts —
+    as opposed to bad requests, which are our bugs and shouldn't trip a circuit breaker."""
+    if is_rate_limited(exc):
+        return True
+    while exc is not None:
+        code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+        if isinstance(code, int) and code >= 500:
+            return True
+        if isinstance(exc, TimeoutError) or "timeout" in type(exc).__name__.lower():
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
 def friendly_error(exc: BaseException) -> str:
     """A customer-safe message for an unexpected failure."""
     if is_rate_limited(exc):

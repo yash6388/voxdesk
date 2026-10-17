@@ -17,6 +17,8 @@
 - [x] **LLM fallback:** every chat model is `Gemini.with_fallbacks([OpenAI-compatible model])` when `FALLBACK_API_KEY` (or `HF_TOKEN`/`HUGGINGFACE_API_KEY`) is set — provider chosen by `FALLBACK_BASE_URL` + `FALLBACK_MODEL` (Groq / OpenRouter / Hugging Face) (router, small talk, knowledge agent, booking agent tool calls); structured output forced to function-calling for HF providers; embeddings deliberately have no fallback. 5 tests (70 total). Live: Hugging Face token valid but account has **no inference credits (402)** → switch provider (e.g. Groq free tier) or buy credits
 - [x] **Full end-to-end verified live** (all services + Groq fallback): small talk; knowledge via A2A with follow-up rewrite; booking via A2A → MCP list/check/book → input-required → confirm → saved in Postgres; voice question → Whisper → knowledge agent → Kokoro
 - [x] Latency fix: with a fallback configured, Gemini `max_retries=0` (a 429 now fails over in ~0.5 s instead of ~2.3 s per call)
+- [x] **Circuit breaker** on Gemini (`app/circuit_breaker.py`): 3 outage errors (429/5xx/timeout, not 400s) in a row → OPEN for 300 s (calls fail in ~0 ms → fallback) → HALF-OPEN trial → CLOSED on success; shared across plain/tool-bound/structured wrappers; guards sync/async/stream paths; double-count bug found by tests and fixed with a context flag
+- [x] `LLM_PRIMARY=fallback` makes the fallback (Groq) primary and Gemini the backup
 - [x] Booking tools return a short customer `reference` (e.g. `DC2A71`); prompt forbids reading out ids
 - Measured on laptop CPU: Whisper ~0.7 s for a 5.5 s utterance; Kokoro ~2.6 s for 5.5 s of audio (RTF ~0.47)
 
@@ -150,5 +152,6 @@
 | 2026-10-18 | Fallback model = Groq `openai/gpt-oss-120b` | Free tier, ~250–600 ms incl. tool calls + structured output; chosen by live comparison against the account's model list |
 | 2026-10-18 | No Gemini retries when a fallback exists | Measured 0.49 s vs 2.34 s to fail on 429; retries were adding ~2 s per call per layer |
 | 2026-10-18 | Short booking `reference` alongside `booking_id` | Agent still needs the full id for follow-up tools; customers (and voice) need something short |
+| 2026-10-18 | Circuit breaker on the primary LLM + `LLM_PRIMARY` switch | Stop paying a 429 round trip per call when the provider is known to be down; manual override for dev |
 | 2026-10-18 | No embedding fallback | Different embedding models produce incomparable vector spaces; would require re-embedding all chunks |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |
