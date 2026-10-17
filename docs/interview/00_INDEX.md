@@ -31,13 +31,13 @@ Each file is written right after the phase it covers, while the details are fres
 | 11 | [11_analytics_and_handoff.md](11_analytics_and_handoff.md) | Recording turns from the event stream, outcome derivation, upsert, analytics SQL (timezone days, percentiles), human handoff + Inbox, the repeat-handoff bug, hand-made SVG charts | ✅ Phase 5 |
 | ★ | [QA_BANK.md](QA_BANK.md) | **105 interview questions with short answers** across the whole project — practise sheet | ✅ |
 
-## Final files (written at the end, once everything is built)
+## Final files (start here before an interview)
 
 | File | Purpose |
 |---|---|
-| `PROJECT_EXPLAINED.md` | The whole project end to end in one place: architecture, every component, data flow, numbers, trade-offs, limitations |
-| `PITCH.md` | Exactly how to present VoxDesk to an interviewer: 30-second, 2-minute and 5-minute versions, whiteboard diagram, and how to steer follow-ups |
-| `SYSTEM_DESIGN.md` | Answering "design this system" rounds: requirements → capacity estimates → high-level design → deep dives (RAG, agents, voice latency) → data model → scaling to 10k businesses → failure handling → trade-offs; with a step-by-step whiteboard script |
+| [PROJECT_EXPLAINED.md](PROJECT_EXPLAINED.md) | The whole project end to end in one place: architecture, every component, data flow, numbers, trade-offs, limitations |
+| [PITCH.md](PITCH.md) | Exactly how to present VoxDesk to an interviewer: 30-second, 2-minute and 5-minute versions, whiteboard diagram, and how to steer follow-ups |
+| [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) | Answering "design this system" rounds: requirements → capacity estimates → high-level design → deep dives (RAG, agents, voice latency) → data model → scaling to 10k businesses → failure handling → trade-offs; with a step-by-step whiteboard script |
 
 ## Glossary (quick lookup)
 

@@ -6,7 +6,8 @@ Multi-agent **voice AI agent platform for businesses** (clinics, salons, restaur
 - `docs/PLAN.md` — full plan, architecture, phases, tech decisions (source of truth)
 - `docs/PROGRESS.md` — what's done, what's next, decision log. **Update it at the end of every work session.**
 - `docs/ARCHITECTURE.md` — living architecture doc with Mermaid diagrams (overview, deployment, components, agent graph, sequence flows, ER model). **Update it after each phase** (flip planned → built, add new flows/tables).
-- `docs/interview/` — beginner-friendly interview notes. **After each phase, add/update the topic file** (see `00_INDEX.md`): plain English → how it works (with file refs) → why/trade-offs → real results → limitations → Q&A. `PROJECT_EXPLAINED.md`, `PITCH.md` and `SYSTEM_DESIGN.md` are written only at the very end.
+- `docs/interview/` — beginner-friendly interview notes. **After each phase, add/update the topic file** (see `00_INDEX.md`): plain English → how it works (with file refs) → why/trade-offs → real results → limitations → Q&A. Final summaries `PROJECT_EXPLAINED.md`, `PITCH.md`, `SYSTEM_DESIGN.md` live in `docs/interview/` — keep their numbers in sync when results change.
+- `README.md` — product-facing only (what it is, features, how to run, config); internals belong in `docs/`.
 
 ## Stack
 - `frontend/` — Next.js (App Router, TypeScript, Tailwind)

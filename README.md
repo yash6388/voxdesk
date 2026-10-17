@@ -1,138 +1,176 @@
 # VoxDesk
 
-**Multi-agent voice AI platform for businesses.** A business uploads its documents and services; customers talk to it by voice or chat. VoxDesk answers questions from the business's own knowledge base (RAG), books appointments through a custom MCP server, and delegates between specialist agents using the A2A protocol.
+[![CI](https://github.com/yash6388/voxdesk/actions/workflows/ci.yml/badge.svg)](https://github.com/yash6388/voxdesk/actions/workflows/ci.yml)
 
-> 🚧 Work in progress. See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap and [`docs/PROGRESS.md`](docs/PROGRESS.md) for current status.
+**A multi-agent voice AI platform for businesses.** A salon, clinic or restaurant adds its documents,
+services and opening hours; its customers then talk to an AI agent by **voice or chat**. The agent
+answers questions from the business's own knowledge base, **books, reschedules and cancels
+appointments** against real availability, and hands the conversation to staff when a person is needed.
 
-## Architecture
+---
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for diagrams (system overview, agent graph, request flows, data model).
+## Features
+
+**For customers**
+- 💬 **Chat and voice** — talk naturally in the browser; answers stream in as text or are spoken sentence by sentence, and you can interrupt the agent mid-sentence.
+- 📚 **Grounded answers** — replies come from the business's own documents, with citations; the agent says so when it doesn't know instead of guessing.
+- 📅 **Appointment booking** — checks live availability, collects name and phone, and asks for confirmation (click or say "yes") before anything is booked.
+- 🙋 **Talk to a person** — asking for staff flags the conversation for the team.
+- 🔗 **Available anywhere** — a public page per business, a QR code, and a one-line chat widget for any website.
+
+**For business owners**
+- 🧠 **Knowledge base** — upload PDF, Markdown or text files; they're indexed automatically.
+- 🛠️ **Services & hours** — durations, prices and weekly opening hours drive what the agent can book.
+- 🗓️ **Bookings** — every appointment the agent makes, with owner cancellation.
+- 📥 **Inbox** — conversations where a customer asked for a person, with full transcripts.
+- 📊 **Analytics** — conversations, bookings, handoffs, blocked messages, errors, response time (p50/p95), daily activity, and breakdowns by intent, outcome and channel.
+- 🔍 **Playground with Agent Inspector** — test the agent and see how each reply was produced: which agent handled it, sources used, tools called, timings and a link to the full trace.
+
+**Under the hood**
+- Supervisor agent (LangGraph) delegating to specialist **Knowledge** and **Booking** agents over the **A2A** protocol
+- Booking tools served by a custom **MCP** server, with a database constraint that rules out double booking
+- Hybrid retrieval (pgvector + Postgres full-text, fused with RRF) — tuned with an evaluation suite
+- Speech-to-text and text-to-speech run locally (faster-whisper, Kokoro) or via ElevenLabs
+- Gemini with automatic failover to any OpenAI-compatible provider, behind a circuit breaker
+- Accounts with tenant isolation, rate limiting, prompt-injection guardrails and Langfuse tracing
 
 ## Tech stack
 
-| Layer | Tech |
+| | |
 |---|---|
-| Frontend | Next.js, TypeScript, Tailwind CSS |
-| Backend | FastAPI, Python 3.13, uv |
-| Agents | LangGraph, LangChain, Gemini |
-| Protocols | MCP (FastMCP), A2A (a2a-sdk) |
-| Data | PostgreSQL + pgvector, Redis |
-| Voice | faster-whisper (STT) + Kokoro (TTS) locally, or ElevenLabs; WebSocket streaming |
+| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| **Backend** | Python 3.13, FastAPI, SQLAlchemy 2 (async), Alembic, uv |
+| **AI** | LangGraph, LangChain, Google Gemini, Gemini embeddings, OpenAI-compatible fallback (e.g. Groq) |
+| **Protocols** | Model Context Protocol (FastMCP), Agent2Agent (a2a-sdk) |
+| **Voice** | faster-whisper, Kokoro (ONNX), ElevenLabs (optional), WebSockets |
+| **Data** | PostgreSQL 16 + pgvector, Redis |
+| **Ops** | Docker Compose, GitHub Actions, Langfuse |
 
-## Project structure
+## Quick start (Docker)
 
-```
-voxdesk/
-├── frontend/            Next.js app (chat, voice UI, dashboard)
-├── backend/             FastAPI API + supervisor, A2A agents (app/agents), MCP server (app/mcp)
-├── docs/                Plan, progress, design notes
-├── samples/             Example business documents for demos and tests
-└── docker-compose.yml   Postgres (pgvector) + Redis
-```
-
-## Running with Docker (everything, one command)
+Requires Docker and a free [Google AI Studio API key](https://aistudio.google.com/apikey).
 
 ```bash
-cp .env.example backend/.env      # add GOOGLE_API_KEY (and optionally FALLBACK_API_KEY)
+git clone https://github.com/yash6388/voxdesk.git
+cd voxdesk
+cp .env.example backend/.env      # then set GOOGLE_API_KEY
 docker compose --profile app up -d --build
 ```
-Opens on http://localhost:3000 (API on :8000). The first start downloads the local voice models
-(~250 MB) into a Docker volume. Seven services start: Postgres, Redis, API, MCP server, Knowledge
-agent, Booking agent and the frontend. `docker compose --profile app down` stops them **all,
-including Postgres/Redis** — for dev mode afterwards, run `docker compose up -d` again.
 
-## Running locally (development)
+Open **http://localhost:3000**, create an account, and add a business. The first start downloads the
+local speech models (~250 MB). To stop everything: `docker compose --profile app down`.
+
+**Demo content:** `samples/` contains documents for a fictional salon ("Glow Studio") — upload them in
+the Knowledge base, add a few services and hours, and try *"How much is a keratin treatment?"* or
+*"Book a haircut tomorrow afternoon"* in the Playground. To fill a demo business automatically, run
+`uv run python -m scripts.seed_demo` from `backend/` (development setup below).
+
+## Development setup
 
 **Prerequisites:** Docker, [uv](https://docs.astral.sh/uv/), Node.js 22+
 
 ```bash
-# 1. Config (add your GOOGLE_API_KEY from https://aistudio.google.com/apikey)
-cp .env.example .env
+cp .env.example backend/.env                  # set GOOGLE_API_KEY
 cp frontend/.env.example frontend/.env.local
+docker compose up -d                          # Postgres + Redis only
+```
 
-# 2. Infrastructure (Postgres + Redis)
-docker compose up -d
-
-# 3. Backend → http://localhost:8000 (API docs at /docs)
+**Backend** (http://localhost:8000, API docs at `/docs`)
+```bash
 cd backend
 uv sync
-uv run alembic upgrade head       # create/upgrade database tables
-uv run python -m scripts.seed_demo   # optional: demo salon with services, hours and a document
-uv run python -m scripts.download_voice_models   # one-time: local speech models (~250 MB)
+uv run alembic upgrade head
+uv run python -m scripts.download_voice_models   # one-time, ~250 MB
 uv run uvicorn app.main:app --reload
+```
 
-# 3b. Supporting services (separate terminal): MCP server :8001,
-#     Knowledge agent :8101, Booking agent :8102 — Ctrl+C stops all
+**Agent services** — MCP server and the two A2A agents, in a second terminal:
+```bash
 cd backend
 ./scripts/dev_services.sh
+```
 
-# 4. Frontend → http://localhost:3000
+**Frontend** (http://localhost:3000)
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Check everything is reachable: `curl localhost:8000/health/services` (or hover the status
-indicator at the bottom of the dashboard sidebar).
+The status dot at the bottom of the dashboard sidebar (or `curl localhost:8000/health/services`)
+shows whether every service is reachable.
 
-## Try it (UI)
+| Service | Port |
+|---|---|
+| Frontend | 3000 |
+| API | 8000 |
+| MCP booking server | 8001 |
+| Knowledge agent | 8101 |
+| Booking agent | 8102 |
+| PostgreSQL | 5433 |
+| Redis | 6380 |
 
-Open http://localhost:3000 → **Get started** to create an owner account (the **first** account
-also takes ownership of businesses created before accounts existed, e.g. the seeded demo salon) →
-**New business** → upload
-`samples/glow-studio-salon.md` in the Knowledge base → open the **Playground** and ask
-*"How much is a keratin treatment?"*, then *"And how long does it take?"*.
-The **Agent Inspector** shows the routing decision, the rewritten search query, the cited sources
-and the latency for each reply.
+## Configuration
 
-To try booking: run the seed script (or add services and hours under **Services & hours**), then in
-the Playground say *"Book a men's haircut tomorrow afternoon"*. The agent checks real availability
-through the MCP server, asks for your name and phone, and shows a **confirmation card** before
-booking. Confirmed bookings appear on the **Bookings** page.
+All settings are environment variables — see [`.env.example`](.env.example) for the full list with
+comments. The important ones:
 
-**Handoff & Inbox:** tell the agent *"I'd like to speak to a person"* — it replies, asks for your
-contact details, and the conversation appears in the **Inbox** (sidebar badge) with its transcript
-until you mark it resolved. **Analytics** shows conversations, bookings, handoffs, guardrail blocks,
-errors, time-to-first-word p50/p95, messages per day and breakdowns by outcome, intent and channel.
+| Variable | Purpose |
+|---|---|
+| `GOOGLE_API_KEY` | Gemini chat and embedding models (**required**) |
+| `FALLBACK_API_KEY`, `FALLBACK_BASE_URL`, `FALLBACK_MODEL` | Backup LLM used automatically when Gemini fails — any OpenAI-compatible provider (Groq, OpenRouter, …) |
+| `LLM_PRIMARY` | `gemini` (default) or `fallback` to make the backup model primary |
+| `STT_PROVIDER`, `TTS_PROVIDER` | `local` (default) or `elevenlabs`, with `ELEVENLABS_API_KEY` |
+| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL` | Optional tracing; leave empty to disable |
+| `JWT_SECRET`, `COOKIE_SECURE` | Must be changed for production — the API refuses to start with the development defaults |
+| `MCP_API_KEY`, `A2A_API_KEY` | Shared secrets between the API, agents and MCP server |
 
-**Customer page & widget:** the **Share** page gives the public link (`/c/<slug>`), a downloadable
-**QR code**, and a one-line **website chat bubble**:
-`<script src="http://localhost:3000/widget.js" data-business="<slug>" async></script>`.
-To see it on a "real" website: `cd samples && python3 -m http.server 8090`, then open
-http://localhost:8090/demo-website.html.
+## Embedding the chat widget
 
-## Try it (voice)
+The **Share** page in the dashboard generates everything below for your business.
 
-Open **Voice** in a business's sidebar, allow the microphone, **hold the button** and ask a question
-or book an appointment. Answers are spoken sentence by sentence; say "yes" or "no" to confirm a
-booking; press the button while the agent is speaking to interrupt it. Speech runs locally
-(faster-whisper + Kokoro) by default — set `TTS_PROVIDER=elevenlabs` and `ELEVENLABS_API_KEY` in
-`backend/.env` for ElevenLabs voices.
+```html
+<script src="https://your-voxdesk-domain/widget.js" data-business="your-business-slug" async></script>
+```
 
-## Try it (API)
+This adds a chat bubble to any website. A direct link (`/c/<slug>`) and a downloadable QR code are
+also available.
 
-With the backend running, open http://localhost:8000/docs and:
-1. `POST /businesses` — create a business
-2. `POST /businesses/{id}/documents` — upload `samples/glow-studio-salon.md`
-3. `POST /businesses/{id}/search` — see hybrid retrieval with semantic + keyword ranks
-4. `POST /chat` — ask a question; the reply streams as Server-Sent Events
-
-## Evaluation
+## Testing and quality
 
 ```bash
 cd backend
-uv run python -m evals.run                      # all suites (uses real models)
-uv run python -m evals.run --suites retrieval   # retrieval only (embeddings, no chat LLM)
+uv run pytest             # 130 tests, against a real Postgres (docker compose up -d)
+uv run ruff check .       # lint
+uv run python -m evals.run   # evaluation suite with real models
 ```
-Latest results (`backend/evals/reports/latest.md`): hybrid retrieval **Hit@1 86% · MRR 0.93**,
-routing **100%**, answer faithfulness **5.0/5** (LLM-as-judge), correct refusals **100%**, booking-agent
-task success **100%**. The chunk size (500) was chosen from these results.
 
-## Development
+The evaluation suite measures retrieval, routing, answer quality and booking behaviour on a golden
+dataset. Latest results: **retrieval Hit@1 86% / Hit@3 100%**, **intent routing 100%**,
+**answer faithfulness 5.0 / 5** (LLM-as-judge), **correct "I don't know" on unanswerable questions
+100%**, **booking task success 100%** — full report in
+[`backend/evals/reports/latest.md`](backend/evals/reports/latest.md).
 
-```bash
-cd backend
-uv run pytest            # tests (needs docker compose up; uses a separate voxdesk_test DB)
-uv run ruff check .      # lint
-uv run ruff format .     # format
+CI (GitHub Actions) runs backend lint and tests with Postgres and Redis, the frontend lint, typecheck
+and build, and builds both Docker images.
+
+## Project structure
+
 ```
+voxdesk/
+├── backend/        FastAPI API, agents, MCP server, evaluation suite, tests
+├── frontend/       Next.js dashboard, customer chat/voice pages, embeddable widget
+├── samples/        Demo business documents and a sample website for the widget
+├── docs/           Architecture and design notes
+└── docker-compose.yml
+```
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — system diagrams, agent graphs, request flows, data model
+- [Design notes](docs/interview/00_INDEX.md) — how each part works and why it was built that way
+
+## Author
+
+Built by **Yash Kumar Singh** — [LinkedIn](https://www.linkedin.com/in/yash-kumarsingh/) ·
+[GitHub](https://github.com/yash6388)
