@@ -18,6 +18,7 @@ from datetime import date, datetime
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
+from starlette.responses import JSONResponse
 
 from app.booking import service as booking
 from app.booking.service import WEEKDAYS, BookingError
@@ -247,9 +248,17 @@ async def reschedule_booking(
 # ---------- HTTP app ----------
 
 
+async def health(request):
+    """Public liveness probe (used by the API's /health/services)."""
+    return JSONResponse({"status": "ok"})
+
+
 def create_app():
     app = mcp.streamable_http_app()
-    app.add_middleware(BearerKeyMiddleware, key=settings.mcp_api_key)
+    app.add_route("/health", health, methods=["GET"])
+    app.add_middleware(
+        BearerKeyMiddleware, key=settings.mcp_api_key, public_paths=frozenset({"/health"})
+    )
     return app
 
 

@@ -4,6 +4,14 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 
 export type HealthResponse = { status: string; environment: string };
 
+export type ServiceHealth = {
+  name: "database" | "mcp_server" | "knowledge_agent" | "booking_agent";
+  status: "up" | "down";
+  latency_ms: number | null;
+  detail: string | null;
+};
+export type ServicesHealth = { status: "ok" | "degraded"; services: ServiceHealth[] };
+
 export type Business = {
   id: string;
   name: string;
@@ -99,6 +107,7 @@ const json = (body: unknown): RequestInit => ({
 // ---------- Endpoints ----------
 
 export const getHealth = () => request<HealthResponse>("/health");
+export const getServicesHealth = () => request<ServicesHealth>("/health/services");
 
 export const listBusinesses = () => request<Business[]>("/businesses");
 export const getBusiness = (id: string) => request<Business>(`/businesses/${id}`);

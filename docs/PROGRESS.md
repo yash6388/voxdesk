@@ -15,6 +15,7 @@
 - [x] Chat API: `custom` stream mode, new `delegation` SSE event; UI/API contract otherwise unchanged
 - [x] Frontend: Agent Inspector shows the handling A2A agent, task id and state
 - [x] `scripts/dev_services.sh` runs MCP + both agents with labelled logs
+- [x] `GET /health/services` readiness check (DB, MCP, both agents in parallel, 2 s timeout each; MCP got a public `/health`); sidebar shows overall status + per-service hover panel
 - [x] 47 tests: real A2A protocol in-process (card, 401, streaming, input-required → resume), supervisor delegation/HITL/fallbacks, booking graph
 - [x] Live: Agent Cards served publicly, JSON-RPC without key → 401; full Gemini conversation blocked by free-tier 429 (graceful message shown end to end)
 
@@ -116,4 +117,5 @@
 | 2026-10-18 | HITL = booking agent `input-required` + supervisor `interrupt()`, reply on same task | Native A2A lifecycle; survives across HTTP requests on both sides |
 | 2026-10-18 | Relay agent output via LangGraph custom stream | Remote tokens/sources/tool calls reach the browser in real time |
 | 2026-10-18 | Agent Card public; JSON-RPC bearer-protected (A2A_API_KEY) | Discovery is public by design; invocation needs credentials |
+| 2026-10-18 | Separate liveness (`/health`) and readiness (`/health/services`) | Orchestrators restart on liveness, route traffic on readiness; one dead dependency shouldn't restart the API |
 | 2026-10-17 | Commit identity = GitHub noreply email (repo-local) | Global git email is the work address; noreply links commits to yash6388 without exposing an email |

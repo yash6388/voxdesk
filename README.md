@@ -60,6 +60,9 @@ npm install
 npm run dev
 ```
 
+Check everything is reachable: `curl localhost:8000/health/services` (or hover the status
+indicator at the bottom of the dashboard sidebar).
+
 ## Try it (UI)
 
 Open http://localhost:3000 → **Open dashboard** → **New business** → upload
