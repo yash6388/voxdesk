@@ -36,12 +36,14 @@ class TurnRecorder:
         channel: str,
         user_text: str,
         declined: bool = False,
+        intent: str | None = None,
     ):
         self.business_id = uuid.UUID(str(business_id))
         self.thread_id = thread_id
         self.channel = channel
         self.user_text = user_text
-        self.intent: str | None = None
+        # Confirmation turns (resume) skip the router, so the caller states the intent.
+        self.intent: str | None = intent
         self._reply: list[str] = []
         self._flags: set[str] = {"booking_declined"} if declined else set()
         self.handoff_reason: str | None = None

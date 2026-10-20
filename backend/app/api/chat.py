@@ -138,6 +138,7 @@ async def resume(body: ChatResume, request: Request, session: SessionDep, limite
                 "chat",
                 "(confirmed)" if body.approved else "(declined)",
                 declined=not body.approved,
+                intent="booking",
             ),
         )
     )

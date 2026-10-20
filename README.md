@@ -7,6 +7,10 @@ services and opening hours; its customers then talk to an AI agent by **voice or
 answers questions from the business's own knowledge base, **books, reschedules and cancels
 appointments** against real availability, and hands the conversation to staff when a person is needed.
 
+<p align="center">
+  <img src="docs/screenshots/playground-booking.png" alt="VoxDesk Playground: the agent answers from the salon's documents and asks the customer to confirm a booking, while the Agent Inspector shows the booking agent and its tool calls" width="100%" />
+</p>
+
 ---
 
 ## Features
@@ -33,6 +37,18 @@ appointments** against real availability, and hands the conversation to staff wh
 - Speech-to-text and text-to-speech run locally (faster-whisper, Kokoro) or via ElevenLabs
 - Gemini with automatic failover to any OpenAI-compatible provider, behind a circuit breaker
 - Accounts with tenant isolation, rate limiting, prompt-injection guardrails and Langfuse tracing
+
+## Screenshots
+
+| | |
+|---|---|
+| <img src="docs/screenshots/landing.png" alt="Landing page" /> **Landing page** | <img src="docs/screenshots/analytics.png" alt="Analytics dashboard" /> **Analytics** — conversations, bookings, response time, intents and outcomes |
+| <img src="docs/screenshots/voice.png" alt="Voice page" /> **Voice** — hold to talk; answers are spoken sentence by sentence | <img src="docs/screenshots/share.png" alt="Share page" /> **Share** — customer link, QR code and website widget |
+
+<p align="center">
+  <img src="docs/screenshots/customer-mobile.png" alt="Customer chat on a phone, with a booking confirmation card" width="300" /><br/>
+  <b>What customers see</b> — the public chat page on a phone
+</p>
 
 ## Tech stack
 

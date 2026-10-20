@@ -42,6 +42,15 @@ def test_outcome_is_derived_from_events(events, outcome):
     assert recorder.outcome == outcome
 
 
+def test_confirmation_turns_count_as_booking_intent():
+    # Resume turns never pass through the router; they must not show up as "not routed".
+    recorder = TurnRecorder(
+        "00000000-0000-0000-0000-000000000001", "t", "chat", "(confirmed)", intent="booking"
+    )
+    recorder.observe("tool_result", {"name": "book_appointment", "status": "success"})
+    assert (recorder.intent, recorder.outcome) == ("booking", "booked")
+
+
 # ---------- persistence ----------
 
 

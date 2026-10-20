@@ -169,15 +169,19 @@ class VoiceSession:
                 return
             await self.send({"type": "decision", "approved": decision})
             graph_input = Command(resume={"approved": decision})
-            recorder = self._recorder(text, declined=not decision)
+            recorder = self._recorder(text, declined=not decision, intent="booking")
         else:
             graph_input = turn_input(self.business, text)
             recorder = self._recorder(text)
 
         await self.respond(graph_input, started, timing, turn, recorder)
 
-    def _recorder(self, text: str, declined: bool = False) -> TurnRecorder:
-        return TurnRecorder(self.business.id, self.thread_id, "voice", text, declined=declined)
+    def _recorder(
+        self, text: str, declined: bool = False, intent: str | None = None
+    ) -> TurnRecorder:
+        return TurnRecorder(
+            self.business.id, self.thread_id, "voice", text, declined=declined, intent=intent
+        )
 
     async def answer(self, approved: bool) -> None:
         """Clicked Confirm/Decline on the card — same effect as saying yes/no."""
@@ -192,7 +196,7 @@ class VoiceSession:
                 time.perf_counter(),
                 {},
                 turn,
-                self._recorder(label, declined=not approved),
+                self._recorder(label, declined=not approved, intent="booking"),
             )
 
     async def respond(
